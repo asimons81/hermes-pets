@@ -1,0 +1,44 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Hermes Pet</title>
+  <link rel="stylesheet" href="./renderer.css">
+</head>
+<body>
+  <div id="pet-container">
+    <!-- Drop zone for custom sprite (hidden by default) -->
+    <div id="drop-zone" class="drop-zone hidden">
+      <span class="drop-icon">📁</span>
+      <span class="drop-text">Drop PNG here</span>
+    </div>
+    <!-- Sprite layer -->
+    <div id="pet-sprite" class="sprite idle"></div>
+    <!-- Connection state -->
+    <div id="connection-status" class="connection-status">Waiting for Hermes</div>
+    <!-- Stats badge -->
+    <div id="pet-stats" class="stats hidden">
+      <div class="name" id="pet-name">-</div>
+      <div class="level" id="pet-level">Lv.1</div>
+      <div class="xp-bar"><div id="xp-fill" style="width:0%"></div></div>
+    </div>
+    <!-- Chat bubble -->
+    <div id="pet-bubble" class="bubble hidden">
+      <div class="tail"></div>
+      <span id="bubble-text">...</span>
+    </div>
+    <!-- Recent event tray -->
+    <div id="event-tray" class="event-tray hidden">
+      <div class="event-tray-title">Hermes Pet</div>
+      <div id="current-status" class="current-status">Idle</div>
+      <div id="event-list" class="event-list"></div>
+    </div>
+    <!-- Minimize handle -->
+    <div id="minimize-btn" class="min-btn" title="Minimize">−</div>
+    <!-- Custom upload hint -->
+    <div id="upload-hint" class="upload-hint hidden" title="Right-click to upload custom sprite">🎨</div>
+  </div>
+  <script src="./renderer.js"></script>
+</body>
+</html>

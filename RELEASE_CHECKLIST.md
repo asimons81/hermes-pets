@@ -18,6 +18,7 @@ node --check overlay/src/main.windows.js
 node --check overlay/src/preload.js
 bash -n shell-helpers/hermes-pet.bash scripts/smoke-hermes-pet.sh
 python3 scripts/validate-sprite-manifest.py
+scripts/verify-packaged-overlay.sh
 scripts/smoke-hermes-pet.sh
 hermes-pet doctor
 ```
@@ -35,8 +36,8 @@ python3 scripts/validate-custom-pet.py "$fixture_dir"
 - Confirm `pyproject.toml` exposes `hermes-pet` and `hermes-pet-bridge`.
 - Confirm Python dependencies match the import surface.
 - Confirm overlay dependencies in `overlay/package.json` still match the Windows launcher cache install.
-- Use `pip install -e .` or `uv tool install --editable /home/tony/projects/hermes-pet` for the current WSL/Windows overlay workflow.
-- Before publishing, fix non-editable packaging so `hermes-pet launch` can find the Electron overlay outside the source checkout.
+- Confirm `scripts/verify-packaged-overlay.sh` passes and reports a cached packaged overlay path.
+- Editable installs should still resolve the repo-local `overlay/`; non-editable installs should resolve packaged overlay assets copied under `~/.hermes_pet/cache/overlay`.
 
 ## Safety
 
@@ -48,4 +49,3 @@ python3 scripts/validate-custom-pet.py "$fixture_dir"
 ## Known Release Gaps
 
 - Rich custom package visual preview tooling is still missing.
-- Non-editable install packaging for the Electron overlay is not ready for public publishing.

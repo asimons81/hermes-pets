@@ -19,6 +19,8 @@ from __future__ import annotations
 
 import argparse
 import importlib
+from importlib import resources
+from importlib.resources.abc import Traversable
 import locale
 import os
 import secrets
@@ -95,12 +97,78 @@ def _overlay_position_path() -> Path:
     return _state_dir() / "overlay-position.json"
 
 
+def _cache_dir() -> Path:
+    return _state_dir() / "cache"
+
+
 def _repo_root() -> Path:
     return Path(__file__).resolve().parents[2]
 
 
-def _overlay_dir() -> Path:
+def _source_overlay_dir() -> Path:
     return _repo_root() / "overlay"
+
+
+def _overlay_required_files() -> tuple[str, ...]:
+    return (
+        "package.json",
+        "src/main.js",
+        "src/main.windows.js",
+        "src/preload.js",
+        "src/renderer.html",
+        "src/renderer.js",
+        "src/renderer.css",
+        "assets/manifest.json",
+        "scripts/launch-windows-overlay.ps1",
+    )
+
+
+def _is_overlay_runtime_dir(path: Path) -> bool:
+    return path.is_dir() and all((path / rel).is_file() for rel in _overlay_required_files())
+
+
+def _copy_overlay_resource_tree(source: Traversable, target: Path) -> None:
+    target.mkdir(parents=True, exist_ok=True)
+    for child in source.iterdir():
+        child_target = target / child.name
+        if child.is_dir():
+            _copy_overlay_resource_tree(child, child_target)
+        elif child.is_file():
+            child_target.parent.mkdir(parents=True, exist_ok=True)
+            child_target.write_bytes(child.read_bytes())
+
+
+def _packaged_overlay_resource() -> Traversable | None:
+    try:
+        overlay = resources.files("hermes_pet").joinpath("overlay")
+    except (ModuleNotFoundError, AttributeError):
+        return None
+    if not overlay.is_dir():
+        return None
+    if not all(overlay.joinpath(*rel.split("/")).is_file() for rel in _overlay_required_files()):
+        return None
+    return overlay
+
+
+def _ensure_cached_packaged_overlay() -> Path:
+    overlay = _packaged_overlay_resource()
+    if overlay is None:
+        raise PetCLIError("Packaged overlay assets were not found. Reinstall Hermes Pet or use an editable repo install.")
+
+    cache_overlay = _cache_dir() / "overlay"
+    if cache_overlay.exists():
+        shutil.rmtree(cache_overlay)
+    _copy_overlay_resource_tree(overlay, cache_overlay)
+    if not _is_overlay_runtime_dir(cache_overlay):
+        raise PetCLIError(f"Cached overlay assets are incomplete: {cache_overlay}")
+    return cache_overlay
+
+
+def _overlay_dir() -> Path:
+    source_overlay = _source_overlay_dir()
+    if not os.environ.get("HERMES_PET_FORCE_PACKAGED_OVERLAY") and _is_overlay_runtime_dir(source_overlay):
+        return source_overlay
+    return _ensure_cached_packaged_overlay()
 
 
 def _load_pet() -> Pet | None:

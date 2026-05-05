@@ -34,4 +34,12 @@ include = ["hermes_pet*"]
 namespaces = true
 
 [tool.setuptools.package-data]
-hermes_pet = ["../../overlay/**/*"]
+hermes_pet = [
+  "overlay/package.json",
+  "overlay/src/*.js",
+  "overlay/src/*.html",
+  "overlay/src/*.css",
+  "overlay/assets/manifest.json",
+  "overlay/assets/sprites/**/*",
+  "overlay/scripts/*.ps1",
+]

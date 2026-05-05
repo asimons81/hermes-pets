@@ -95,7 +95,7 @@ hpbrief
 ## Known Limitations
 
 - The overlay is primarily tuned for WSL launching a Windows Electron window.
-- Editable/repo-based installs are currently required for `hermes-pet launch`; non-editable Python installs do not yet package the Electron overlay.
+- Editable installs use the repo-local `overlay/`; non-editable installs use packaged overlay assets cached under `~/.hermes_pet/cache/overlay`.
 - The bridge must be reachable for live overlay events; local event/job history still records when the bridge is unavailable.
 - Custom pet `idle` is required; missing optional states rely on renderer fallback behavior.
 - Custom pet selection is local state only and does not add the pet to built-in gacha species metadata.
@@ -112,5 +112,4 @@ hpbrief
 - Add a compact cleanup/export command for state, prefs, event history, and jobs.
 - Add richer renderer tests or browser-level overlay smoke checks for sprite visibility and event reactions.
 - Add a visual package preview command for custom pets.
-- Package the repo-local Electron overlay for non-editable installs before publishing.
 - Document a regular backup path for `~/.hermes_pet`.
