@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 set -uo pipefail
 
-echo "== Hermes Pet smoke =="
+echo "== Hermes Pets smoke =="
 
 if ! command -v hermes-pet >/dev/null 2>&1; then
   echo "hermes-pet command not found on PATH" >&2
@@ -18,7 +18,7 @@ hermes-pet doctor || true
 
 echo
 echo "== emit bubble =="
-if ! hermes-pet emit bubble "Hermes Pet smoke check"; then
+if ! hermes-pet emit bubble "Hermes Pets smoke check"; then
   echo "emit failed; launch the overlay with: hermes-pet launch" >&2
 fi
 
@@ -47,4 +47,4 @@ echo "== brief =="
 hermes-pet brief --since 24h
 
 echo
-echo "Hermes Pet smoke complete."
+echo "Hermes Pets smoke complete."

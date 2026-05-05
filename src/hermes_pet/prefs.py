@@ -1,4 +1,4 @@
-"""Local notification preferences for Hermes Pet."""
+"""Local notification preferences for Hermes Pets."""
 
 from __future__ import annotations
 

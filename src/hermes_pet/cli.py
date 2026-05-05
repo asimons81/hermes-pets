@@ -1,4 +1,4 @@
-"""Standalone argparse CLI for Hermes Pet.
+"""Standalone argparse CLI for Hermes Pets.
 
 Commands:
 - bare ``hermes-pet``: hatch if needed, otherwise show status
@@ -153,7 +153,7 @@ def _packaged_overlay_resource() -> Traversable | None:
 def _ensure_cached_packaged_overlay() -> Path:
     overlay = _packaged_overlay_resource()
     if overlay is None:
-        raise PetCLIError("Packaged overlay assets were not found. Reinstall Hermes Pet or use an editable repo install.")
+        raise PetCLIError("Packaged overlay assets were not found. Reinstall Hermes Pets or use an editable repo install.")
 
     cache_overlay = _cache_dir() / "overlay"
     if cache_overlay.exists():
@@ -666,7 +666,7 @@ def _cmd_doctor(_: argparse.Namespace) -> int:
     overlay_dir = _overlay_dir()
     checks: list[bool] = []
 
-    print("Hermes Pet doctor")
+    print("Hermes Pets doctor")
     checks.append(_doctor_line("python", bool(sys.executable), sys.executable or "not found"))
 
     cli_path = shutil.which("hermes-pet")
@@ -682,7 +682,7 @@ def _cmd_doctor(_: argparse.Namespace) -> int:
         _doctor_line(
             "websockets package",
             bool(getattr(bridge_mod, "_WEBSOCKETS_AVAILABLE", False)),
-            "available" if getattr(bridge_mod, "_WEBSOCKETS_AVAILABLE", False) else "missing; install Hermes Pet dependencies",
+            "available" if getattr(bridge_mod, "_WEBSOCKETS_AVAILABLE", False) else "missing; install Hermes Pets dependencies",
         )
     )
     checks.append(
@@ -1641,7 +1641,7 @@ def _cmd_wrap(args: argparse.Namespace) -> int:
 def _build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(
         prog="hermes-pet",
-        description="Hermes Pet — a persistent CLI companion.",
+        description="Hermes Pets — a persistent CLI companion.",
         formatter_class=argparse.ArgumentDefaultsHelpFormatter,
     )
     subparsers = parser.add_subparsers(dest="command")
@@ -1675,22 +1675,22 @@ def _build_parser() -> argparse.ArgumentParser:
     launch.add_argument(
         "--replace",
         action="store_true",
-        help="Stop existing Hermes Pet overlay instances before launching a fresh one.",
+        help="Stop existing Hermes Pets overlay instances before launching a fresh one.",
     )
     launch.set_defaults(func=_launch_bridge_and_overlay)
 
     overlay_status = subparsers.add_parser("overlay-status", help="Show bridge and overlay process status.")
     overlay_status.set_defaults(func=_cmd_overlay_status)
 
-    close = subparsers.add_parser("close", help="Stop Hermes Pet overlay processes.")
+    close = subparsers.add_parser("close", help="Stop Hermes Pets overlay processes.")
     close.add_argument(
         "--bridge",
         action="store_true",
-        help="Also stop the Hermes Pet bridge process for the active port.",
+        help="Also stop the Hermes Pets bridge process for the active port.",
     )
     close.set_defaults(func=_cmd_close)
 
-    doctor = subparsers.add_parser("doctor", help="Run local Hermes Pet operator diagnostics.")
+    doctor = subparsers.add_parser("doctor", help="Run local Hermes Pets operator diagnostics.")
     doctor.set_defaults(func=_cmd_doctor)
 
     custom = subparsers.add_parser("custom", help="Set a custom PNG sprite.")
@@ -1750,7 +1750,7 @@ def _build_parser() -> argparse.ArgumentParser:
     message.add_argument("text", nargs="+", help="Message body to show, truncated before emitting.")
     message.set_defaults(func=_cmd_message)
 
-    brief = subparsers.add_parser("brief", help="Summarize recent local Hermes Pet activity.")
+    brief = subparsers.add_parser("brief", help="Summarize recent local Hermes Pets activity.")
     brief.add_argument(
         "--since",
         default="24h",

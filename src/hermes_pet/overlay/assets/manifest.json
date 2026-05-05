@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "comment": "Hermes Pet animation manifest. Each state defines FPS, loop, fallback, and optional frame file list. Empty/absent frames = use species default PNG at assets/sprites/{species}.png. Multi-frame rows live under assets/sprites/{species}/{state}/ unless a state supplies an assetDir.",
+  "comment": "Hermes Pets animation manifest. Each state defines FPS, loop, fallback, and optional frame file list. Empty/absent frames = use species default PNG at assets/sprites/{species}.png. Multi-frame rows live under assets/sprites/{species}/{state}/ unless a state supplies an assetDir.",
   "states": {
     "idle":          { "fps": 1, "loop": true },
     "drag":          { "fps": 1, "loop": true },

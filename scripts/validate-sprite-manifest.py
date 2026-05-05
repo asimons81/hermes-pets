@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Validate Hermes Pet sprite manifest frame references."""
+"""Validate Hermes Pets sprite manifest frame references."""
 
 from __future__ import annotations
 

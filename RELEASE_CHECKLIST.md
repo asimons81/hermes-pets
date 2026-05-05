@@ -1,4 +1,4 @@
-# Hermes Pet Release Checklist
+# Hermes Pets Release Checklist
 
 Use this before a public release candidate. Do not push, tag, or publish from this checklist unless that is the explicit release task.
 

@@ -1,4 +1,4 @@
-"""Small local event schema for Hermes Pet ambient activity."""
+"""Small local event schema for Hermes Pets ambient activity."""
 
 from __future__ import annotations
 

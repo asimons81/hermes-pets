@@ -1,4 +1,4 @@
-# Hermes Pet Current State
+# Hermes Pets Current State
 
 Snapshot date: 2026-05-05
 

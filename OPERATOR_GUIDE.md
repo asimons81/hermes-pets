@@ -1,4 +1,4 @@
-# Hermes Pet Operator Guide
+# Hermes Pets Operator Guide
 
 This is the short version for daily use.
 
@@ -70,7 +70,7 @@ Run a command with an inferred name:
 hermes-pet run -- npm test
 ```
 
-Hermes Pet records start, success, failure, duration, exit code, and a redacted command. Sensitive-looking flags are not retryable.
+Hermes Pets records start, success, failure, duration, exit code, and a redacted command. Sensitive-looking flags are not retryable.
 
 Retry the latest safe failed job:
 

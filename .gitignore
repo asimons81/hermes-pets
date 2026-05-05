@@ -43,7 +43,7 @@ id_ed25519
 # Generated pet/artifact output
 output/
 
-# Local Hermes Pet runtime state
+# Local Hermes Pets runtime state
 .hermes_pet/
 pet.json
 custom.png

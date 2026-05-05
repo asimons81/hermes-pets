@@ -1,5 +1,5 @@
 /**
- * Hermes Pet Overlay Renderer
+ * Hermes Pets Overlay Renderer
  * Receives events from the Electron bridge and updates the sprite + UI.
  */
 
@@ -1097,7 +1097,7 @@ if (window.hermesPetAPI) {
 
 // Default state: show idle empty until first event
 setMood('idle');
-nameEl.textContent = 'Hermes Pet';
+nameEl.textContent = 'Hermes Pets';
 
 // =====================================================================
 // FEATURE F1: Custom sprite upload (drag & drop + right-click file picker)

@@ -1,4 +1,4 @@
-# Hermes Pet Demo Plan
+# Hermes Pets Demo Plan
 
 Use this as the capture checklist for the first private repo post and demo.
 
@@ -19,7 +19,7 @@ Use this as the capture checklist for the first private repo post and demo.
 cd /home/tony/projects/hermes-pet
 hermes-pet doctor
 hermes-pet launch --replace
-hermes-pet emit bubble "Starting the Hermes Pet demo"
+hermes-pet emit bubble "Starting the Hermes Pets demo"
 hermes-pet wrap --name "Demo success" -- bash -lc 'sleep 1; echo done'
 hermes-pet wrap --name "Demo expected failure" -- bash -lc 'sleep 1; exit 2'
 hermes-pet jobs --last
@@ -38,7 +38,7 @@ set -euo pipefail
 cd /home/tony/projects/hermes-pet
 hermes-pet doctor
 hermes-pet launch --replace
-hermes-pet emit bubble "Hermes Pet is live"
+hermes-pet emit bubble "Hermes Pets is live"
 hermes-pet wrap --name "Demo smoke" -- bash -lc 'sleep 1; echo smoke-ok'
 hermes-pet brief --since 24h
 ```

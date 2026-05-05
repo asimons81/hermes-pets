@@ -1,4 +1,4 @@
-# Hermes Pet Local Changelog
+# Hermes Pets Local Changelog
 
 This file records local implementation milestones and release-candidate notes alongside Git history.
 

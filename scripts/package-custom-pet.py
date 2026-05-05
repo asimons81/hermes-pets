@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Create a Hermes Pet custom pet package from built-in sprites or a hatch-pet run."""
+"""Create a Hermes Pets custom pet package from built-in sprites or a hatch-pet run."""
 
 from __future__ import annotations
 
@@ -73,7 +73,7 @@ def main() -> int:
     parser.add_argument("--source", help="Existing package, hatch-pet run, or sprites folder.")
     parser.add_argument("--builtin-species", help="Export an existing built-in animated species.")
     parser.add_argument("--output", required=True, help="Destination package directory.")
-    parser.add_argument("--repo-root", default=Path(__file__).resolve().parents[1], help="Hermes Pet repo root.")
+    parser.add_argument("--repo-root", default=Path(__file__).resolve().parents[1], help="Hermes Pets repo root.")
     args = parser.parse_args()
 
     name = validate_pet_name(args.name)

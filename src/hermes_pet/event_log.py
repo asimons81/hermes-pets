@@ -1,4 +1,4 @@
-"""Bounded local event log for CLI-emitted Hermes Pet activity."""
+"""Bounded local event log for CLI-emitted Hermes Pets activity."""
 
 from __future__ import annotations
 

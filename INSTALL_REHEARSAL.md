@@ -1,4 +1,4 @@
-# Hermes Pet Clean Install Rehearsal
+# Hermes Pets Clean Install Rehearsal
 
 Date: 2026-05-05
 
@@ -107,4 +107,4 @@ env PATH=/tmp/hermes-pet-release-rehearsal-20260505-1745-venv/bin:/usr/local/sbi
 - The Windows Electron dependency cache is shared at
   `C:\Users\asimo\AppData\Local\HermesAgent\pet-overlay-electron`, but the
   overlay process itself was matched and controlled by the temp packaged overlay
-  path, avoiding the normal installed Hermes Pet state.
+  path, avoiding the normal installed Hermes Pets state.

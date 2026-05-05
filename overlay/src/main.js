@@ -18,7 +18,7 @@ const MAX_RECONNECT_DELAY_MS = 30000;
 const CONNECTION_LOG_INTERVAL_MS = 30000;
 const ALWAYS_ON_TOP_LEVEL = process.env.HERMES_PET_ALWAYS_ON_TOP_LEVEL || 'screen-saver';
 const WINDOW_SIZE = { width: 280, height: 340 };
-const PET_TITLE = `Hermes Pet Overlay [${process.pid}]`;
+const PET_TITLE = `Hermes Pets Overlay [${process.pid}]`;
 const PET_SPECIES = process.env.HERMES_PET_SPECIES || 'cat';
 const DEBUG_EVENTS = process.env.HERMES_PET_DEBUG_EVENTS === '1';
 const DEBUG_ANIMATION = process.env.HERMES_PET_DEBUG_ANIMATION === '1';

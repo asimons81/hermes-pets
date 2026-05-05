@@ -7,7 +7,7 @@ name = "hermes-pet"
 version = "0.1.0"
 description = "Tamagotchi-style desktop coding companion — adopt a virtual pet that levels up as you code"
 readme = "README.md"
-authors = [{ name = "Hermes Pet Contributors" }]
+authors = [{ name = "Hermes Pets Contributors" }]
 license = { text = "MIT" }
 requires-python = ">=3.10"
 dependencies = [

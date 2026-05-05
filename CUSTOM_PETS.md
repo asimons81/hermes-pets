@@ -1,6 +1,6 @@
-# Hermes Pet Custom Pets
+# Hermes Pets Custom Pets
 
-Hermes Pet custom pets are animated sprite packages installed outside the repo, under the active state directory:
+Hermes Pets custom pets are animated sprite packages installed outside the repo, under the active state directory:
 
 ```text
 ${HERMES_PET_HOME:-~/.hermes_pet}/custom-pets/<pet-name>/

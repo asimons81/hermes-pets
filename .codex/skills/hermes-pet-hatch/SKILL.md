@@ -1,15 +1,15 @@
 ---
 name: hermes-pet-hatch
-description: Create Hermes Pet-compatible custom animated pet packages from text prompts, references, or hatch-pet finalized runs. Use when a user wants to generate, package, validate, preview, import, or install custom Hermes Pet animated pets without modifying built-in repo assets.
+description: Create Hermes Pets-compatible custom animated pet packages from text prompts, references, or hatch-pet finalized runs. Use when a user wants to generate, package, validate, preview, import, or install custom Hermes Pets animated pets without modifying built-in repo assets.
 ---
 
-# Hermes Pet Hatch
+# Hermes Pets Hatch
 
 ## Purpose
 
-Create animated pets for Hermes Pet's overlay runtime. This skill is a Hermes-specific adapter around the general `hatch-pet` workflow: use `hatch-pet` for visual generation and row QA, then package the finalized frames into a Hermes custom pet package that can be imported with `hermes-pet custom-pet import <path> --name <name>`.
+Create animated pets for the Hermes Pets overlay runtime. This skill is a Hermes-specific adapter around the general `hatch-pet` workflow: use `hatch-pet` for visual generation and row QA, then package the finalized frames into a Hermes custom pet package that can be imported with `hermes-pet custom-pet import <path> --name <name>`.
 
-Do not add generated pets to `overlay/assets/sprites/` by default. Built-in assets are repo-owned. Custom pets should be packaged under `output/` first and installed into the user's Hermes Pet state directory only when asked.
+Do not add generated pets to `overlay/assets/sprites/` by default. Built-in assets are repo-owned. Custom pets should be packaged under `output/` first and installed into the user's Hermes Pets state directory only when asked.
 
 ## Package Format
 
@@ -140,7 +140,7 @@ hermes-pet custom-pet use <slug>
 hermes-pet custom-pet current
 ```
 
-The import destination is outside the repo under the active Hermes Pet state dir:
+The import destination is outside the repo under the active Hermes Pets state dir:
 
 ```text
 ${HERMES_PET_HOME:-~/.hermes_pet}/custom-pets/<slug>/

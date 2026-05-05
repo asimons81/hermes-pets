@@ -1,7 +1,7 @@
 {
   "name": "hermes-pet-overlay",
   "version": "0.1.0",
-  "description": "Hermes Pet desktop overlay — floating companion sprite",
+  "description": "Hermes Pets desktop overlay — floating companion sprite",
   "main": "src/main.js",
   "private": true,
   "scripts": {

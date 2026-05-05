@@ -1,8 +1,8 @@
-# Hermes Pet
+# Hermes Pets
 
-![Hermes Pet promo banner](docs/assets/hermes-pet-banner.png)
+![Hermes Pets promo banner](docs/assets/hermes-pet-banner.png)
 
-Hermes Pet is a local desktop companion for Hermes-style daily work: a small animated overlay that reacts to commands, messages, briefs, and ambient status events while staying fully controllable from the terminal.
+Hermes Pets is a local desktop companion for Hermes-style daily work: a small animated overlay that reacts to commands, messages, briefs, and ambient status events while staying fully controllable from the terminal.
 
 It exists to make long local coding sessions feel more legible and alive. The pet gives visible feedback when work starts, finishes, fails, needs attention, or goes quiet, without requiring a hosted service or remote account.
 
@@ -26,7 +26,7 @@ Install from the repo, then launch the bridge and overlay:
 cd /home/tony/projects/hermes-pet
 pip install -e .
 hermes-pet launch
-hermes-pet emit bubble "Hello from Hermes Pet"
+hermes-pet emit bubble "Hello from Hermes Pets"
 hermes-pet doctor
 ```
 
@@ -94,7 +94,7 @@ hermes-pet species
 
 ## Custom Animated Pets
 
-Hermes Pet can use custom animated sprite packages without adding generated assets to the repo. Custom pets install into the active state directory:
+Hermes Pets can use custom animated sprite packages without adding generated assets to the repo. Custom pets install into the active state directory:
 
 ```text
 ${HERMES_PET_HOME:-~/.hermes_pet}/custom-pets/<pet-name>/
@@ -213,7 +213,7 @@ Disable long-running status events:
 hermes-pet wrap --name "Long job" --status-interval 0 -- ./slow-job
 ```
 
-Hermes Pet records recent jobs in `~/.hermes_pet/jobs.json`, including start/end time, duration, exit code, status, redacted command, and short output/error summaries when output is captured.
+Hermes Pets records recent jobs in `~/.hermes_pet/jobs.json`, including start/end time, duration, exit code, status, redacted command, and short output/error summaries when output is captured.
 
 ## Jobs and Retry
 
@@ -369,7 +369,7 @@ It checks prefs, runs doctor, emits a bubble, wraps one successful command, wrap
 
 ## Windows and WSL Notes
 
-Hermes Pet is currently tuned for WSL driving a Windows Electron overlay.
+Hermes Pets is currently tuned for WSL driving a Windows Electron overlay.
 
 - Run CLI commands from WSL.
 - Editable installs use the repo-local `overlay/` directory; non-editable installs use the packaged overlay cached under `~/.hermes_pet/cache/overlay`.

@@ -1,4 +1,4 @@
-"""Hermes Pet System — Tamagotchi-style terminal companion.
+"""Hermes Pets System — Tamagotchi-style terminal companion.
 
 Inspired by OpenAI Codex /pet (May 2026). A persistent, gacha-driven
 companion that lives in your Hermes CLI session. Species are deterministic per

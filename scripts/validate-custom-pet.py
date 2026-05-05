@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Validate a Hermes Pet custom pet package."""
+"""Validate a Hermes Pets custom pet package."""
 
 from __future__ import annotations
 

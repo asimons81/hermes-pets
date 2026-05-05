@@ -35,7 +35,7 @@ const userDataRoot = process.env.LOCALAPPDATA
   ? path.join(process.env.LOCALAPPDATA, 'HermesAgent', 'pet-overlay-electron', 'user-data')
   : path.join(os.homedir(), '.hermes-pet-overlay-electron');
 app.setPath('userData', userDataRoot);
-app.setName('Hermes Pet Overlay');
+app.setName('Hermes Pets Overlay');
 
 const hasSingleInstanceLock = app.requestSingleInstanceLock();
 if (!hasSingleInstanceLock) {
@@ -97,7 +97,7 @@ function createWindow() {
     ...WINDOW_SIZE,
     x: pos.x,
     y: pos.y,
-    title: `Hermes Pet Overlay [windows ${process.pid}]`,
+    title: `Hermes Pets Overlay [windows ${process.pid}]`,
     transparent: true,
     frame: false,
     skipTaskbar: true,

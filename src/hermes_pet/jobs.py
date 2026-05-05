@@ -1,4 +1,4 @@
-"""Recent wrapped-job history for Hermes Pet."""
+"""Recent wrapped-job history for Hermes Pets."""
 
 from __future__ import annotations
 

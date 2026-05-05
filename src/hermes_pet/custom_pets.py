@@ -1,4 +1,4 @@
-"""Custom animated pet package support for Hermes Pet."""
+"""Custom animated pet package support for Hermes Pets."""
 
 from __future__ import annotations
 

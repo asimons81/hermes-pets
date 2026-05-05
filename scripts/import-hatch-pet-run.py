@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Import a finalized hatch-pet run into Hermes Pet sprite assets."""
+"""Import a finalized hatch-pet run into Hermes Pets sprite assets."""
 
 from __future__ import annotations
 

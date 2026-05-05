@@ -1,4 +1,4 @@
-# Hermes Pet shell helpers.
+# Hermes Pets shell helpers.
 #
 # Usage:
 #   source /home/tony/projects/hermes-pet/shell-helpers/hermes-pet.bash
