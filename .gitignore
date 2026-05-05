@@ -1,0 +1,60 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.coverage
+htmlcov/
+
+# Python packaging/build output
+build/
+dist/
+*.egg-info/
+pip-wheel-metadata/
+
+# Virtual environments
+.venv/
+venv/
+env/
+ENV/
+
+# Node/Electron dependencies and logs
+node_modules/
+overlay/node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+electron-debug.log*
+*.log
+
+# Generated pet/artifact output
+output/
+
+# Local Hermes Pet runtime state
+.hermes_pet/
+pet.json
+custom.png
+events.json
+jobs.json
+prefs.json
+overlay-position.json
+
+# Temporary smoke/test output
+.smoke/
+smoke-output/
+smoke-output-*/
+tmp/
+temp/
+
+# OS/editor files
+.DS_Store
+Thumbs.db
+desktop.ini
+.idea/
+.vscode/
+*.swp
+*.swo
+*~
