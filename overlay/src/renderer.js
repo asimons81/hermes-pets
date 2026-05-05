@@ -33,6 +33,7 @@ const animController = {
   currentFrame: 0,
   frameTimer: null,
   species: '',
+  customPet: null,
   blinkTimer: null,
   hoverActive: false,
   _playingOneShot: false,
@@ -69,6 +70,9 @@ const animController = {
 
   _stateAssetDir(stateName, cfg) {
     var assetDir = cfg && cfg.assetDir ? cfg.assetDir : stateName;
+    if (this.customPet && this.customPet.baseUrl) {
+      return this.customPet.baseUrl + '/sprites/' + assetDir + '/';
+    }
     return '../assets/sprites/' + this.species + '/' + assetDir + '/';
   },
 
@@ -79,6 +83,9 @@ const animController = {
       && this.species
       && this.manifest.species[this.species]
       && this.manifest.species[this.species].states;
+    if (this.customPet && this.customPet.manifest && this.customPet.manifest.states) {
+      return !!this.customPet.manifest.states[stateName];
+    }
     return !!((speciesStates && speciesStates[stateName]) || this.manifest.states[stateName]);
   },
 
@@ -147,6 +154,13 @@ const animController = {
       && this.species
       && this.manifest.species[this.species]
       && this.manifest.species[this.species].states;
+    if (this.customPet && this.customPet.manifest && this.customPet.manifest.states) {
+      return this.customPet.manifest.states[stateName]
+        || this.customPet.manifest.states.idle
+        || this.manifest.states[stateName]
+        || this.manifest.states.idle
+        || null;
+    }
     return (speciesStates && speciesStates[stateName])
       || this.manifest.states[stateName]
       || (speciesStates && speciesStates.idle)
@@ -163,6 +177,7 @@ const animController = {
       var file = frames[idx];
       return this._stateAssetDir(stateName, cfg) + file;
     }
+    if (this.customPet && this.customPet.baseUrl) return '';
     return '../assets/sprites/' + this.species + '.png';
   },
 
@@ -294,7 +309,8 @@ const animController = {
     }
   },
 
-  init(species) {
+  init(species, customPet) {
+    this.customPet = customPet || null;
     this.species = species;
     if (!this.manifest) return;
     this.stopLoop();
@@ -304,7 +320,7 @@ const animController = {
     this._preloaded = Object.create(null);
     this._unavailable = Object.create(null);
     this._lastBgSrc = '';
-    this.debugLog('init species=' + species);
+    this.debugLog('init species=' + species + (this.customPet ? ' custom=' + this.customPet.name : ''));
     this.transition('idle');
     this._startBlinkTimer();
   },
@@ -413,15 +429,40 @@ let notificationPrefs = { ...DEFAULT_NOTIFICATION_PREFS };
 // ---- Sprite setters ----
 const ASSET_BASE = '../assets/sprites';
 
+function pathToFileUrl(filePath) {
+  var text = String(filePath || '').replace(/\\/g, '/');
+  if (!text) return '';
+  if (/^file:\/\//i.test(text)) return text.replace(/\/+$/, '');
+  if (text.startsWith('//')) return 'file:' + encodeURI(text).replace(/#/g, '%23').replace(/\?/g, '%3F');
+  if (/^[A-Za-z]:\//.test(text)) return 'file:///' + encodeURI(text).replace(/#/g, '%23').replace(/\?/g, '%3F');
+  return 'file://' + encodeURI(text).replace(/#/g, '%23').replace(/\?/g, '%3F');
+}
+
+function normalizeCustomPet(customPet) {
+  if (!customPet || typeof customPet !== 'object') return null;
+  var petPath = customPet.overlay_path || customPet.path;
+  if (!petPath || !customPet.manifest || !customPet.manifest.states || !customPet.manifest.states.idle) {
+    return null;
+  }
+  return {
+    name: String(customPet.name || 'custom'),
+    baseUrl: pathToFileUrl(petPath),
+    manifest: customPet.manifest,
+  };
+}
+
 function setSprite(species, variant) {
   if (variant === void 0) variant = 'normal';
-  if (animController.species !== species) {
+  var nextCustomPet = normalizeCustomPet(state.custom_pet);
+  var currentCustomName = animController.customPet && animController.customPet.name;
+  var nextCustomName = nextCustomPet && nextCustomPet.name;
+  if (animController.species !== species || currentCustomName !== nextCustomName) {
     if (_petDragging) {
       if (DEBUG_ANIM) console.log('[pet-anim] BLOCKED setSprite(' + species + ') while dragging');
       return;
     }
     animController.species = species;
-    if (animController.manifest) animController.init(species);
+    if (animController.manifest) animController.init(species, nextCustomPet);
     else spriteEl.style.backgroundImage = 'url("' + ASSET_BASE + '/' + species + '.png")';
   }
 }
@@ -968,6 +1009,7 @@ function handleEvent(msg) {
       state.name = msg.name;
       state.variant = msg.variant || 'normal';
       state.shiny = msg.shiny || false;
+      state.custom_pet = msg.custom_pet || null;
       state.level = 1;
       state.xp = 0;
       state.xpNext = 100;
@@ -979,10 +1021,17 @@ function handleEvent(msg) {
 
     case 'state':
       Object.assign(state, msg);
+      state.custom_pet = msg.custom_pet || null;
       state.xpNext = msg.xp_next || state.xpNext;
       setSprite(state.species, state.variant);
       setShiny(state.shiny);
       updateStats();
+      break;
+
+    case 'custom_pet':
+      state.custom_pet = msg.custom_pet || null;
+      setSprite(state.species || 'cat', state.variant);
+      if (state.custom_pet) showBubble('Using custom pet ' + state.custom_pet.name, 2500);
       break;
 
     case 'notification_prefs':

@@ -229,8 +229,9 @@ class PetEventBridge:
         variant: str,
         hat: str,
         favorite_tool: str = "",
+        custom_pet: dict[str, Any] | None = None,
     ) -> dict[str, Any]:
-        return {
+        event = {
             "type": "state",
             "species": species,
             "name": name,
@@ -242,6 +243,9 @@ class PetEventBridge:
             "hat": hat,
             "favorite_tool": favorite_tool,
         }
+        if custom_pet:
+            event["custom_pet"] = custom_pet
+        return event
 
     async def _maybe_send_state(self, websocket) -> None:
         """Push current pet state to a newly-connected overlay.
@@ -252,6 +256,7 @@ class PetEventBridge:
         """
         try:
             from hermes_pet.engine import SPECIES, load_pet
+            from hermes_pet.custom_pets import custom_pet_event_payload
 
             override_species = (os.getenv("HERMES_PET_SPECIES") or "").strip().lower()
             if override_species and override_species not in SPECIES:
@@ -262,6 +267,7 @@ class PetEventBridge:
                 override_species = ""
 
             pet = load_pet("")  # no profile filtering for now
+            custom_pet = custom_pet_event_payload()
 
             if pet and (not override_species or pet.species == override_species):
                 event = self._state_event(
@@ -273,6 +279,7 @@ class PetEventBridge:
                     hat=str(getattr(pet, "hat", "none")),
                     favorite_tool=getattr(SPECIES.get(getattr(pet, "species", "")), "favorite_tool", "")
                     or "",
+                    custom_pet=custom_pet,
                 )
                 _debug_event(
                     "send initial state type=%s species=%s",
@@ -299,6 +306,24 @@ class PetEventBridge:
                             variant="normal",
                             hat="none",
                             favorite_tool=getattr(species_def, "favorite_tool", "") or "",
+                            custom_pet=custom_pet,
+                        ),
+                        separators=(",", ":"),
+                    )
+                )
+                return
+
+            if custom_pet:
+                await websocket.send(
+                    json.dumps(
+                        self._state_event(
+                            species="cat",
+                            name="",
+                            level=1,
+                            xp=0,
+                            variant="normal",
+                            hat="none",
+                            custom_pet=custom_pet,
                         ),
                         separators=(",", ":"),
                     )

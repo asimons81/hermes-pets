@@ -43,6 +43,19 @@ hermes-pet brief
 
 Keep the overlay running in the background. Use `wrap` or `run` for work you want in job history.
 
+## Custom Pets
+
+Install animated custom pets outside the repo:
+
+```bash
+hermes-pet custom-pet validate <path>
+hermes-pet custom-pet import <path> --name <name>
+hermes-pet custom-pet use <name>
+hermes-pet custom-pet current
+```
+
+Custom pets live under `${HERMES_PET_HOME:-~/.hermes_pet}/custom-pets/<name>/`. Use `hermes-pet custom-pet list` to see installed pets and `hermes-pet custom-pet remove <name>` to delete one.
+
 ## Wrapping Work
 
 Wrap named work:
@@ -173,6 +186,16 @@ hermes-pet doctor
 ```
 
 If it is still invisible, check whether the overlay window is off-screen. The position file is in `~/.hermes_pet/overlay-position.json` unless `HERMES_PET_HOME` is set.
+
+If a custom pet does not appear, run:
+
+```bash
+hermes-pet custom-pet current
+hermes-pet custom-pet validate ~/.hermes_pet/custom-pets/<name>
+hermes-pet launch --replace
+```
+
+Invalid custom pets are ignored so built-in species continue to work.
 
 Bridge unavailable:
 

@@ -33,6 +33,16 @@ from datetime import datetime, timedelta, timezone
 from pathlib import Path
 from typing import Callable
 
+from hermes_pet.custom_pets import (
+    current_custom_pet,
+    custom_pet_event_payload,
+    import_package,
+    inspect_package,
+    list_custom_pets,
+    remove_custom_pet,
+    set_current_custom_pet,
+    validate_pet_name,
+)
 from hermes_pet.engine import (
     Pet,
     delete_pet,
@@ -690,6 +700,92 @@ def _cmd_custom(args: argparse.Namespace) -> int:
     dest.parent.mkdir(parents=True, exist_ok=True)
     shutil.copy2(src, dest)
     print(f"🖼️ Custom sprite saved to {dest}")
+    return 0
+
+
+def _notify_custom_pet_changed(payload: dict[str, object] | None) -> bool:
+    bridge_mod = importlib.import_module("hermes_pet.bridge")
+    port = _resolve_bridge_port(bridge_mod)
+    host = os.environ.get("HERMES_PET_HOST") or "127.0.0.1"
+    bridge_url = os.environ.get("HERMES_PET_WS_URL")
+    return bridge_mod.send_event_to_bridge(
+        {"type": "custom_pet", "custom_pet": payload},
+        port=port,
+        host=host,
+        bridge_url=bridge_url,
+    )
+
+
+def _cmd_custom_pet_list(_: argparse.Namespace) -> int:
+    pets = list_custom_pets(_state_dir())
+    if not pets:
+        print(f"No custom pets installed in {_state_dir() / 'custom-pets'}.")
+        return 0
+    for pet in pets:
+        marker = "*" if pet.get("current") else " "
+        if pet.get("valid"):
+            states = ", ".join(pet.get("states", []))
+            print(f"{marker} {pet['name']}  ({states})")
+        else:
+            print(f"! {pet['name']}  invalid: {pet.get('error', 'unknown error')}")
+    return 0
+
+
+def _cmd_custom_pet_validate(args: argparse.Namespace) -> int:
+    try:
+        package = inspect_package(args.path, name=getattr(args, "name", None))
+    except Exception as exc:
+        raise PetCLIError(f"Custom pet validation failed: {exc}") from exc
+    print(f"✅ Custom pet package is valid: {package.name}")
+    print(f"Path:   {package.root}")
+    print(f"Format: {package.source_format}")
+    print(f"States: {', '.join(sorted(package.states))}")
+    return 0
+
+
+def _cmd_custom_pet_import(args: argparse.Namespace) -> int:
+    try:
+        name = validate_pet_name(args.name)
+        dest = import_package(args.path, name=name, base_dir=_state_dir())
+    except Exception as exc:
+        raise PetCLIError(f"Custom pet import failed: {exc}") from exc
+    print(f"✅ Imported custom pet {name} to {dest}")
+    return 0
+
+
+def _cmd_custom_pet_use(args: argparse.Namespace) -> int:
+    try:
+        payload = set_current_custom_pet(args.name, _state_dir())
+    except Exception as exc:
+        raise PetCLIError(f"Could not select custom pet: {exc}") from exc
+    _notify_custom_pet_changed(payload)
+    print(f"✅ Using custom pet {payload['name']}")
+    return 0
+
+
+def _cmd_custom_pet_current(_: argparse.Namespace) -> int:
+    payload = custom_pet_event_payload(_state_dir())
+    if not payload:
+        current = current_custom_pet(_state_dir())
+        if current:
+            print(f"Current custom pet is invalid or unavailable: {current.get('name')}")
+        else:
+            print("No custom pet selected.")
+        return 0
+    print(f"Current custom pet: {payload['name']}")
+    print(f"Path: {payload['path']}")
+    print(f"States: {', '.join(sorted(payload['manifest']['states']))}")
+    return 0
+
+
+def _cmd_custom_pet_remove(args: argparse.Namespace) -> int:
+    try:
+        name = validate_pet_name(args.name)
+        remove_custom_pet(name, _state_dir())
+    except Exception as exc:
+        raise PetCLIError(f"Could not remove custom pet: {exc}") from exc
+    _notify_custom_pet_changed(custom_pet_event_payload(_state_dir()))
+    print(f"🗑️ Removed custom pet {name}")
     return 0
 
 
@@ -1532,6 +1628,34 @@ def _build_parser() -> argparse.ArgumentParser:
     custom = subparsers.add_parser("custom", help="Set a custom PNG sprite.")
     custom.add_argument("path", help="Path to the PNG to copy into the pet state directory.")
     custom.set_defaults(func=_cmd_custom)
+
+    custom_pet = subparsers.add_parser("custom-pet", help="Manage animated custom pets.")
+    custom_pet_sub = custom_pet.add_subparsers(dest="custom_pet_action")
+
+    custom_pet_list = custom_pet_sub.add_parser("list", help="List installed custom pets.")
+    custom_pet_list.set_defaults(func=_cmd_custom_pet_list)
+
+    custom_pet_validate = custom_pet_sub.add_parser("validate", help="Validate a custom pet package directory.")
+    custom_pet_validate.add_argument("path", help="Package, hatch-pet run, or sprites folder to validate.")
+    custom_pet_validate.add_argument("--name", default=None, help="Optional name to validate against.")
+    custom_pet_validate.set_defaults(func=_cmd_custom_pet_validate)
+
+    custom_pet_import = custom_pet_sub.add_parser("import", help="Import a custom pet package into local state.")
+    custom_pet_import.add_argument("path", help="Package, hatch-pet run, or sprites folder to import.")
+    custom_pet_import.add_argument("--name", required=True, help="Installed custom pet name.")
+    custom_pet_import.set_defaults(func=_cmd_custom_pet_import)
+
+    custom_pet_use = custom_pet_sub.add_parser("use", help="Select an installed custom pet for the overlay.")
+    custom_pet_use.add_argument("name", help="Installed custom pet name.")
+    custom_pet_use.set_defaults(func=_cmd_custom_pet_use)
+
+    custom_pet_current = custom_pet_sub.add_parser("current", help="Show the selected custom pet.")
+    custom_pet_current.set_defaults(func=_cmd_custom_pet_current)
+
+    custom_pet_remove = custom_pet_sub.add_parser("remove", help="Remove an installed custom pet.")
+    custom_pet_remove.add_argument("name", help="Installed custom pet name.")
+    custom_pet_remove.set_defaults(func=_cmd_custom_pet_remove)
+    custom_pet.set_defaults(func=_cmd_custom_pet_list)
 
     emit = subparsers.add_parser("emit", help="Emit an ambient event to the live overlay.")
     emit.add_argument(

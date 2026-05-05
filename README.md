@@ -50,6 +50,27 @@ hermes-pet play
 hermes-pet species
 ```
 
+## Custom Animated Pets
+
+Custom animated pets install into the active state directory instead of the repo:
+
+```text
+${HERMES_PET_HOME:-~/.hermes_pet}/custom-pets/<pet-name>/
+```
+
+Manage them with:
+
+```bash
+hermes-pet custom-pet list
+hermes-pet custom-pet validate <path>
+hermes-pet custom-pet import <path> --name <name>
+hermes-pet custom-pet use <name>
+hermes-pet custom-pet current
+hermes-pet custom-pet remove <name>
+```
+
+`<path>` can be a finalized `hatch-pet` run or a package with `custom-pet.json` and `sprites/<state>/*.png`. `idle` is required; optional states fall back to idle when missing. See `CUSTOM_PETS.md` for the package format and the repo-local Codex skill at `.codex/skills/hermes-pet-hatch/SKILL.md`.
+
 ## Launch
 
 Start the bridge and launch the overlay:
@@ -319,6 +340,7 @@ Hermes Pet is currently tuned for WSL driving a Windows Electron overlay.
 
 - `src/hermes_pet/cli.py`: command-line interface and operator commands.
 - `src/hermes_pet/bridge.py`: WebSocket bridge.
+- `src/hermes_pet/custom_pets.py`: custom animated pet package validation, import, and selection.
 - `src/hermes_pet/events.py`: local event schema.
 - `src/hermes_pet/jobs.py`: wrapped-job history and redaction.
 - `src/hermes_pet/prefs.py`: quiet/mute preferences.
@@ -328,6 +350,8 @@ Hermes Pet is currently tuned for WSL driving a Windows Electron overlay.
 - `overlay/scripts/launch-windows-overlay.ps1`: Windows single-instance launcher.
 - `shell-helpers/hermes-pet.bash`: optional shell helpers.
 - `scripts/smoke-hermes-pet.sh`: daily smoke test.
+- `scripts/validate-custom-pet.py`, `scripts/package-custom-pet.py`: custom pet package helpers.
+- `CUSTOM_PETS.md`: custom animated pet format and workflow.
 - `OPERATOR_GUIDE.md`: short daily-use guide.
 
 ## Recovery
