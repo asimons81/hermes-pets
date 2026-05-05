@@ -1,6 +1,6 @@
 # Hermes Pet Local Changelog
 
-This project directory is not a Git repository, so this file records the local implementation milestones manually.
+This file records local implementation milestones and release-candidate notes alongside Git history.
 
 ## 2026-05-05 Consolidation Snapshot
 

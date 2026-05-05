@@ -614,7 +614,7 @@ def _cmd_doctor(_: argparse.Namespace) -> int:
         _doctor_line(
             "websockets package",
             bool(getattr(bridge_mod, "_WEBSOCKETS_AVAILABLE", False)),
-            "available" if getattr(bridge_mod, "_WEBSOCKETS_AVAILABLE", False) else "missing; install package extras",
+            "available" if getattr(bridge_mod, "_WEBSOCKETS_AVAILABLE", False) else "missing; install Hermes Pet dependencies",
         )
     )
     checks.append(

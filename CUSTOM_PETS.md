@@ -59,3 +59,8 @@ python scripts/validate-custom-pet.py output/hermes-pet-hatch/<slug>/package
 ```
 
 Keep generated work in `output/`. Install only when you want to use a package locally.
+
+## Known Limitations
+
+- There is no rich visual preview command yet; use the generated contact sheet, validate the package, then import and launch the overlay for a live check.
+- Custom pet selection is local state under `~/.hermes_pet` and does not add the package to the built-in species manifest.

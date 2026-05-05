@@ -16,18 +16,20 @@ Pet state and local history live under `~/.hermes_pet` by default. Set `HERMES_P
 
 ## Install and CLI
 
-Install from the repo:
+Install for normal WSL/Windows overlay use from the repo:
 
 ```bash
 cd /home/tony/projects/hermes-pet
-pip install .
-```
-
-For development:
-
-```bash
 pip install -e .
 ```
+
+With `uv`:
+
+```bash
+uv tool install --editable /home/tony/projects/hermes-pet
+```
+
+The editable/repo-based install is currently the supported path for `hermes-pet launch`, because the Electron overlay is loaded from the repo's `overlay/` directory. A non-editable `pip install .` installs the Python CLI entry points, but the overlay packaging still needs to be tightened before publishing.
 
 The Python package exposes:
 
@@ -330,6 +332,7 @@ It checks prefs, runs doctor, emits a bubble, wraps one successful command, wrap
 Hermes Pet is currently tuned for WSL driving a Windows Electron overlay.
 
 - Run CLI commands from WSL.
+- Install from the repo with `pip install -e .` or `uv tool install --editable /home/tony/projects/hermes-pet` so the CLI can find the repo-local `overlay/` directory.
 - `hermes-pet launch` starts the Python bridge in WSL and launches Electron through PowerShell on Windows.
 - `hermes-pet launch --replace` is the recovery path for duplicate or stale overlays.
 - The Windows overlay dependencies are cached under `%LOCALAPPDATA%\HermesAgent\pet-overlay-electron`.

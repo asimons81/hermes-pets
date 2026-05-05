@@ -30,6 +30,16 @@ pnpm-debug.log*
 electron-debug.log*
 *.log
 
+# Local env/secrets
+.env
+.env.*
+*.pem
+*.key
+*.p12
+*.pfx
+id_rsa
+id_ed25519
+
 # Generated pet/artifact output
 output/
 
