@@ -1,8 +1,10 @@
 # Hermes Pet
 
-Hermes Pet is a local desktop companion for Hermes-style daily work. It combines a Python CLI, a small WebSocket event bridge, and a floating Electron overlay so a pet can react to jobs, messages, briefs, and ambient status events while staying recoverable from the terminal.
+Hermes Pet is a local desktop companion for Hermes-style daily work: a small animated overlay that reacts to commands, messages, briefs, and ambient status events while staying fully controllable from the terminal.
 
-The current tool is focused on practical operator use:
+It exists to make long local coding sessions feel more legible and alive. The pet gives visible feedback when work starts, finishes, fails, needs attention, or goes quiet, without requiring a hosted service or remote account.
+
+The repo combines a Python CLI, a WebSocket bridge, local state under `~/.hermes_pet`, and a floating Electron overlay for WSL/Windows. The current tool is focused on practical operator use:
 
 - Launch one floating pet overlay from WSL/Windows.
 - Emit lightweight activity events to the overlay.
@@ -14,9 +16,23 @@ The current tool is focused on practical operator use:
 
 Pet state and local history live under `~/.hermes_pet` by default. Set `HERMES_PET_HOME` when you intentionally want an isolated state directory.
 
+## Quickstart
+
+Install from the repo, then launch the bridge and overlay:
+
+```bash
+cd /home/tony/projects/hermes-pet
+pip install -e .
+hermes-pet launch
+hermes-pet emit bubble "Hello from Hermes Pet"
+hermes-pet doctor
+```
+
+On WSL/Windows, run the CLI from WSL. `hermes-pet launch` starts the Python bridge in WSL and opens the Electron overlay through the Windows PowerShell launcher.
+
 ## Install and CLI
 
-Install for normal WSL/Windows overlay use from the repo:
+For editable local development:
 
 ```bash
 cd /home/tony/projects/hermes-pet
@@ -47,7 +63,22 @@ hermes-pet-bridge
 
 Running `hermes-pet` with no subcommand hatches a pet if one does not exist, or prints the current pet status.
 
-Basic pet commands are still available:
+Main commands:
+
+```bash
+hermes-pet launch
+hermes-pet launch --replace
+hermes-pet overlay-status
+hermes-pet emit bubble "Starting work"
+hermes-pet wrap --name "Tests" -- pytest
+hermes-pet jobs --last
+hermes-pet brief --since 24h
+hermes-pet quiet
+hermes-pet mute 30m
+hermes-pet doctor
+```
+
+Basic pet commands are also available:
 
 ```bash
 hermes-pet status
@@ -61,7 +92,7 @@ hermes-pet species
 
 ## Custom Animated Pets
 
-Custom animated pets install into the active state directory instead of the repo:
+Hermes Pet can use custom animated sprite packages without adding generated assets to the repo. Custom pets install into the active state directory:
 
 ```text
 ${HERMES_PET_HOME:-~/.hermes_pet}/custom-pets/<pet-name>/
@@ -385,4 +416,4 @@ hermes-pet brief --since 24h
 
 ## License
 
-MIT.
+`pyproject.toml` declares MIT. This repository does not currently include a `LICENSE` file; add one before a public release or before sharing under explicit open-source terms.
