@@ -1,5 +1,7 @@
 # Hermes Pet
 
+![Hermes Pet promo banner](docs/assets/hermes-pet-banner.png)
+
 Hermes Pet is a local desktop companion for Hermes-style daily work: a small animated overlay that reacts to commands, messages, briefs, and ambient status events while staying fully controllable from the terminal.
 
 It exists to make long local coding sessions feel more legible and alive. The pet gives visible feedback when work starts, finishes, fails, needs attention, or goes quiet, without requiring a hosted service or remote account.
