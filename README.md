@@ -418,4 +418,4 @@ hermes-pet brief --since 24h
 
 ## License
 
-`pyproject.toml` declares MIT. This repository does not currently include a `LICENSE` file; add one before a public release or before sharing under explicit open-source terms.
+MIT. See `LICENSE`.
