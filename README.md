@@ -23,8 +23,13 @@ Pet state and local history live under `~/.hermes_pet` by default. Set `HERMES_P
 Install from the repo, then launch the bridge and overlay:
 
 ```bash
+# Install from GitHub
+pip install 'git+https://github.com/asimons81/hermes-pets.git'
+
+# Or, for local development
 cd /home/tony/projects/hermes-pet
 pip install -e .
+
 hermes-pet launch
 hermes-pet emit bubble "Hello from Hermes Pets"
 hermes-pet doctor
