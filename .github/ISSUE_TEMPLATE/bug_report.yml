@@ -1,0 +1,79 @@
+name: Bug report
+description: Report a reproducible Hermes Pets problem.
+title: "[Bug]: "
+labels:
+  - bug
+  - needs-triage
+body:
+  - type: textarea
+    id: what-happened
+    attributes:
+      label: What happened?
+      description: Describe the problem and what you were doing when it happened.
+    validations:
+      required: true
+  - type: textarea
+    id: expected
+    attributes:
+      label: Expected behavior
+      description: What did you expect Hermes Pets to do?
+    validations:
+      required: true
+  - type: textarea
+    id: reproduction
+    attributes:
+      label: Reproduction steps
+      description: List the smallest set of steps or commands that reproduces the issue.
+      placeholder: |
+        1. Run ...
+        2. See ...
+    validations:
+      required: true
+  - type: textarea
+    id: logs
+    attributes:
+      label: Command output/logs
+      description: Paste relevant command output or logs. Remove secrets and private paths first.
+      render: shell
+  - type: input
+    id: os
+    attributes:
+      label: OS
+      placeholder: Windows 11 + Ubuntu WSL2, Ubuntu 24.04, macOS 15, etc.
+    validations:
+      required: true
+  - type: input
+    id: python
+    attributes:
+      label: Python version
+      placeholder: python --version
+    validations:
+      required: true
+  - type: dropdown
+    id: install-mode
+    attributes:
+      label: Install mode
+      options:
+        - pip install from GitHub
+        - editable pip install
+        - uv tool install
+        - local source checkout
+        - other
+    validations:
+      required: true
+  - type: dropdown
+    id: wsl2
+    attributes:
+      label: WSL2 yes/no
+      options:
+        - "yes"
+        - "no"
+        - not sure
+    validations:
+      required: true
+  - type: textarea
+    id: doctor
+    attributes:
+      label: hermes-pet doctor output
+      description: Run `hermes-pet doctor` and paste the output. Remove secrets and private paths first.
+      render: shell

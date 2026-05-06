@@ -421,6 +421,12 @@ hermes-pet jobs --last
 hermes-pet brief --since 24h
 ```
 
+## Contributing
+
+Contributions are welcome. See `CONTRIBUTING.md` for setup, smoke tests, pull request expectations, and custom pet contribution guidance.
+
+The best first areas are docs, custom pets, smoke tests, CLI polish, overlay reliability, and WSL/Windows docs.
+
 ## License
 
 MIT. See `LICENSE`.

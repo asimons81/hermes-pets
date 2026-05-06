@@ -1,0 +1,46 @@
+name: Custom pet
+description: Propose or contribute a custom Hermes Pets package.
+title: "[Custom Pet]: "
+labels:
+  - custom-pet
+  - needs-triage
+body:
+  - type: input
+    id: pet-name
+    attributes:
+      label: Pet name
+      placeholder: "Example: terminal-cat"
+    validations:
+      required: true
+  - type: textarea
+    id: description
+    attributes:
+      label: Description
+      description: Describe the pet's look, personality, and intended feel.
+    validations:
+      required: true
+  - type: textarea
+    id: animations
+    attributes:
+      label: Included states/animations
+      description: List the included states, such as idle, working, success, failure, alert, or sleeping.
+    validations:
+      required: true
+  - type: textarea
+    id: license
+    attributes:
+      label: Asset license/attribution
+      description: Explain who created the assets and what license applies.
+    validations:
+      required: true
+  - type: textarea
+    id: previews
+    attributes:
+      label: Preview screenshots/GIFs
+      description: Drag in preview images or GIFs if available.
+  - type: textarea
+    id: validation
+    attributes:
+      label: Validation command output
+      description: Paste output from `hermes-pet custom-pet validate <path>`.
+      render: shell
