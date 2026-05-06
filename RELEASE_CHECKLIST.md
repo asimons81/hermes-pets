@@ -12,14 +12,15 @@ Use this before a public release candidate. Do not push, tag, or publish from th
 
 ```bash
 python3 -m compileall -q src/hermes_pet
+pytest
 node --check overlay/src/renderer.js
 node --check overlay/src/main.js
 node --check overlay/src/main.windows.js
 node --check overlay/src/preload.js
-bash -n shell-helpers/hermes-pet.bash scripts/smoke-hermes-pet.sh
+bash -n shell-helpers/hermes-pet.bash scripts/smoke-hermes-pet.sh scripts/smoke-github-install.sh
 python3 scripts/validate-sprite-manifest.py
 scripts/verify-packaged-overlay.sh
-scripts/smoke-hermes-pet.sh
+scripts/smoke-hermes-pet.sh --temp-state
 hermes-pet doctor
 ```
 
@@ -29,7 +30,17 @@ For custom package checks, validate an existing package or create a temporary bu
 fixture_dir="$(mktemp -d)/fox-fixture"
 python3 scripts/package-custom-pet.py --builtin-species fox --name fox-fixture --output "$fixture_dir"
 python3 scripts/validate-custom-pet.py "$fixture_dir"
+hermes-pet custom-pet validate docs/fixtures/custom-pets/minimal-spark
 ```
+
+For a public install rehearsal from GitHub:
+
+```bash
+scripts/smoke-github-install.sh
+```
+
+Set `HERMES_PET_INSTALL_TARGET` when rehearsing a branch, tag, fork, or local
+path with the same script.
 
 ## Installability
 

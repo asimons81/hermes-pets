@@ -658,7 +658,7 @@ def _readable_json_file(path: Path, *, missing_ok: bool = False) -> tuple[bool, 
     return True, str(path)
 
 
-def _cmd_doctor(_: argparse.Namespace) -> int:
+def _cmd_doctor(args: argparse.Namespace) -> int:
     bridge_mod = importlib.import_module("hermes_pet.bridge")
     port = _resolve_bridge_port(bridge_mod)
     host = os.environ.get("HERMES_PET_HOST") or "127.0.0.1"
@@ -756,6 +756,9 @@ def _cmd_doctor(_: argparse.Namespace) -> int:
         print("Doctor result: ready.")
         return 0
     print("Doctor result: warnings found. Use 'hermes-pet launch --replace' for duplicate or stale overlay issues.")
+    if getattr(args, "strict", False):
+        print("Strict mode: failing because one or more doctor checks warned.")
+        return 1
     return 0
 
 
@@ -1691,6 +1694,11 @@ def _build_parser() -> argparse.ArgumentParser:
     close.set_defaults(func=_cmd_close)
 
     doctor = subparsers.add_parser("doctor", help="Run local Hermes Pets operator diagnostics.")
+    doctor.add_argument(
+        "--strict",
+        action="store_true",
+        help="Exit non-zero when any doctor check reports a warning.",
+    )
     doctor.set_defaults(func=_cmd_doctor)
 
     custom = subparsers.add_parser("custom", help="Set a custom PNG sprite.")

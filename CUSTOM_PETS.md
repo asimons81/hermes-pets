@@ -53,12 +53,46 @@ The skill uses the existing `hatch-pet` workflow for generation and QA, then pac
 Useful helper scripts:
 
 ```bash
-python scripts/package-custom-pet.py --source output/hatch-pet-runs/<slug> --name <slug> --output output/hermes-pet-hatch/<slug>/package
-python scripts/package-custom-pet.py --builtin-species fox --name fox-fixture --output output/hermes-pet-hatch/fox-fixture/package
-python scripts/validate-custom-pet.py output/hermes-pet-hatch/<slug>/package
+python3 scripts/package-custom-pet.py --source output/hatch-pet-runs/<slug> --name <slug> --output output/hermes-pet-hatch/<slug>/package
+python3 scripts/package-custom-pet.py --builtin-species fox --name fox-fixture --output output/hermes-pet-hatch/fox-fixture/package
+python3 scripts/validate-custom-pet.py output/hermes-pet-hatch/<slug>/package
 ```
 
 Keep generated work in `output/`. Install only when you want to use a package locally.
+
+## Minimal Fixture
+
+The repo includes a tiny curated package for documentation, validation, and
+operator trust checks:
+
+```text
+docs/fixtures/custom-pets/minimal-spark/
+  custom-pet.json
+  sprites/
+    idle/
+      idle_00.png
+  README.md
+```
+
+Validate it with either the public CLI command or the repo helper:
+
+```bash
+hermes-pet custom-pet validate docs/fixtures/custom-pets/minimal-spark
+python3 scripts/validate-custom-pet.py docs/fixtures/custom-pets/minimal-spark
+```
+
+Use an isolated state directory when you want to rehearse import/use without
+touching your daily pet selection:
+
+```bash
+HERMES_PET_HOME=/tmp/hermes-pet-fixture-state hermes-pet custom-pet import docs/fixtures/custom-pets/minimal-spark --name minimal-spark
+HERMES_PET_HOME=/tmp/hermes-pet-fixture-state hermes-pet custom-pet use minimal-spark
+HERMES_PET_HOME=/tmp/hermes-pet-fixture-state hermes-pet custom-pet current
+```
+
+The fixture is intentionally minimal: one valid idle PNG, one metadata file, and
+no optional animation states. It proves the package contract without adding a
+generated pet run to the repository.
 
 ## Known Limitations
 

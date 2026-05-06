@@ -20,7 +20,9 @@ Snapshot date: 2026-05-05
 - The bridge sends selected custom pet metadata to the overlay, and the renderer can load custom package frames from the local custom pet path.
 - A repo-local Codex skill exists at `.codex/skills/hermes-pet-hatch/SKILL.md` for creating Hermes-compatible custom pet packages.
 - `hermes-pet doctor` checks CLI, bridge, overlay, state, prefs, and job history.
+- `hermes-pet doctor --strict` returns non-zero when any doctor check warns.
 - Bash helpers and a smoke script are available for daily operation.
+- A temp-state smoke mode and a fresh GitHub install smoke script are available for release confidence.
 
 ## Key Commands
 
@@ -52,7 +54,9 @@ hermes-pet prefs
 hermes-pet brief --since 24h
 hermes-pet brief --emit
 hermes-pet doctor
-scripts/smoke-hermes-pet.sh
+hermes-pet doctor --strict
+scripts/smoke-hermes-pet.sh --temp-state
+scripts/smoke-github-install.sh
 ```
 
 Optional shell helpers:
@@ -87,6 +91,7 @@ hpbrief
 - `overlay/scripts/launch-windows-overlay.ps1`: Windows single-instance launcher.
 - `shell-helpers/hermes-pet.bash`: Bash aliases/functions.
 - `scripts/smoke-hermes-pet.sh`: smoke verification script.
+- `scripts/smoke-github-install.sh`: fresh virtualenv install smoke for the public GitHub install path.
 - `scripts/validate-custom-pet.py`: custom pet package validator.
 - `scripts/package-custom-pet.py`: custom pet package helper for hatch runs and built-in fixtures.
 - `.codex/skills/hermes-pet-hatch/SKILL.md`: Hermes-specific custom pet creation workflow.
@@ -99,16 +104,14 @@ hpbrief
 - The bridge must be reachable for live overlay events; local event/job history still records when the bridge is unavailable.
 - Custom pet `idle` is required; missing optional states rely on renderer fallback behavior.
 - Custom pet selection is local state only and does not add the pet to built-in gacha species metadata.
-- `doctor` returns success even with warnings, so read the warning lines rather than relying only on the exit code.
+- `doctor` returns success even with warnings by default, so read the warning lines for daily use; use `doctor --strict` for CI-style failure on warnings.
 - `retry` only targets the latest failed job and refuses redacted sensitive commands.
-- The smoke script intentionally creates one successful job and one expected failed job in local history.
+- The smoke script intentionally creates one successful job and one expected failed job in the active state directory; use `--temp-state` to isolate that history.
 - `emit`, `message`, and `brief --emit` require the bridge/overlay to be running.
 
 ## Next Recommended Improvements
 
-- Add a lightweight automated test suite for CLI command behavior, job history, preference normalization, and event schema validation.
-- Add a non-mutating smoke mode that uses a temporary `HERMES_PET_HOME`.
-- Make `doctor` optionally return non-zero for CI-style strict checks.
+- Expand automated CLI tests around parser behavior, wrapped command execution, and brief formatting.
 - Add a compact cleanup/export command for state, prefs, event history, and jobs.
 - Add richer renderer tests or browser-level overlay smoke checks for sprite visibility and event reactions.
 - Add a visual package preview command for custom pets.

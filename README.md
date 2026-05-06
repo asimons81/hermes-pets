@@ -1,6 +1,6 @@
 # Hermes Pets
 
-![Hermes Pets promo banner](docs/assets/hermes-pet-banner.png)
+![Hermes Pets promo banner](docs/assets/hermes-pet-banner-updated.png)
 
 Hermes Pets is a local desktop companion for Hermes-style daily work: a small animated overlay that reacts to commands, messages, briefs, and ambient status events while staying fully controllable from the terminal.
 
@@ -25,7 +25,7 @@ These screenshots are local demo captures. The text is generic, and there is no 
 | Launch bubble | Review tray | README banner |
 | --- | --- | --- |
 | <img src="docs/assets/hermes-pet-launch-bubble.png" alt="Hermes Pets launch bubble" width="340"> | <img src="docs/assets/hermes-pet-review-tray.png" alt="Hermes Pets review tray" width="340"> | <img src="docs/assets/hermes-pet-banner-updated.png" alt="Hermes Pets README banner" width="340"> |
-| The pet reacts to `hermes-pet launch` with a visible bubble and status card. | Job history and approval-needed state, with the event tray open. | The updated banner asset from the PR, preserved as a separate preview. |
+| The pet reacts to `hermes-pet launch` with a visible bubble and status card. | Job history and approval-needed state, with the event tray open. | The banner asset used at the top of this README. |
 
 ## Quickstart
 
@@ -92,6 +92,7 @@ hermes-pet brief --since 24h
 hermes-pet quiet
 hermes-pet mute 30m
 hermes-pet doctor
+hermes-pet doctor --strict
 ```
 
 Basic pet commands are also available:
@@ -136,6 +137,22 @@ hermes-pet launch
 ```
 
 On WSL/Windows, `launch` uses `overlay/scripts/launch-windows-overlay.ps1`. That launcher keeps the Electron install in `%LOCALAPPDATA%\HermesAgent\pet-overlay-electron`, reuses an existing overlay when one is already running, and points it at `ws://127.0.0.1:17473` by default.
+
+The launch boundary is:
+
+```text
+WSL shell
+  -> hermes-pet launch
+  -> Python bridge in WSL on ws://127.0.0.1:17473
+  -> Windows PowerShell launcher
+  -> Electron dependency cache in %LOCALAPPDATA%\HermesAgent\pet-overlay-electron
+  -> floating Windows overlay
+```
+
+Keep `pwsh.exe` or `powershell.exe` discoverable from WSL, and keep
+`/mnt/c/Windows/system32` available on `PATH` so process checks work. If the CLI
+reports that PowerShell or Windows process checks are missing, run
+`hermes-pet doctor` from the same WSL shell you use for `hermes-pet launch`.
 
 Replace a stale or duplicate overlay:
 
@@ -350,6 +367,34 @@ hermes-pet doctor
 Doctor checks Python, CLI availability, the `websockets` package, bridge reachability, overlay files, Windows overlay status when available, state directory writeability, preferences, and recent job history.
 
 Warnings do not always mean the tool is unusable. A bridge warning usually means the overlay bridge is not running yet; use `hermes-pet launch` or `hermes-pet launch --replace`.
+
+Use strict mode in CI-style checks when warnings should fail the command:
+
+```bash
+hermes-pet doctor --strict
+```
+
+## Smoke Checks
+
+Run the local smoke against an isolated state directory:
+
+```bash
+scripts/smoke-hermes-pet.sh --temp-state
+```
+
+Rehearse a non-editable install from the current checkout:
+
+```bash
+scripts/smoke-hermes-pet.sh --fresh-install
+```
+
+Rehearse the public GitHub install path in a fresh virtualenv:
+
+```bash
+scripts/smoke-github-install.sh
+```
+
+Set `HERMES_PET_INSTALL_TARGET` to test a branch, tag, fork, or local path with the same fresh-install smoke script.
 
 ## Shell Helpers
 

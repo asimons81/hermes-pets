@@ -21,7 +21,20 @@ Check what is running:
 ```bash
 hermes-pet overlay-status
 hermes-pet doctor
+hermes-pet doctor --strict
 ```
+
+On WSL/Windows, run these commands from WSL. `launch` starts or reuses the
+Python bridge in WSL, then calls the Windows PowerShell launcher at
+`overlay/scripts/launch-windows-overlay.ps1`. That launcher keeps Electron
+dependencies in `%LOCALAPPDATA%\HermesAgent\pet-overlay-electron` and opens the
+floating Windows overlay against `ws://127.0.0.1:17473` unless the port or URL is
+overridden.
+
+For reliable launch checks, keep `/mnt/c/Windows/System32/WindowsPowerShell/v1.0`
+and `/mnt/c/Windows/system32` on the WSL `PATH`. If `doctor`, `overlay-status`,
+`launch`, or `close` cannot find the Windows launcher or process tools, fix the
+WSL shell `PATH` first, then rerun `hermes-pet doctor`.
 
 Close only the overlay:
 
@@ -55,6 +68,16 @@ hermes-pet custom-pet current
 ```
 
 Custom pets live under `${HERMES_PET_HOME:-~/.hermes_pet}/custom-pets/<name>/`. Use `hermes-pet custom-pet list` to see installed pets and `hermes-pet custom-pet remove <name>` to delete one.
+
+A tiny repo fixture is available for validating the custom pet path without
+generating art:
+
+```bash
+hermes-pet custom-pet validate docs/fixtures/custom-pets/minimal-spark
+hermes-pet custom-pet import docs/fixtures/custom-pets/minimal-spark --name minimal-spark
+hermes-pet custom-pet use minimal-spark
+hermes-pet launch --replace
+```
 
 ## Wrapping Work
 
@@ -206,6 +229,28 @@ hermes-pet overlay-status
 ```
 
 If `emit`, `message`, or `brief --emit` says the bridge is unavailable, the overlay event bridge is not reachable at `ws://127.0.0.1:17473` or the port set by `HERMES_PET_PORT`.
+
+CI-style diagnostics:
+
+```bash
+hermes-pet doctor --strict
+```
+
+Default `doctor` prints warnings but exits successfully so daily operators can
+read the report without breaking a shell flow. `--strict` returns non-zero when
+any check warns.
+
+WSL-to-Windows launch failure:
+
+```bash
+hermes-pet doctor
+hermes-pet overlay-status
+command -v powershell.exe
+```
+
+`hermes-pet launch` needs the WSL bridge, Windows PowerShell, and Windows process
+tools to agree. A sanitized shell is fine, but it still needs the Windows
+PowerShell and system directories on `PATH`.
 
 Prefs or jobs look wrong:
 
