@@ -17,10 +17,12 @@ Snapshot date: 2026-05-06
 - Quiet, silent, mute, and preference controls exist.
 - Named notification profiles exist for normal, focus, pairing, demo, and silent workflows.
 - `hermes-pet brief` summarizes recent jobs and events.
-- `hermes-pet state export` and `hermes-pet state cleanup` support compact local recovery and maintenance.
+- `hermes-pet state export` produces compact redacted diagnostics, and `hermes-pet state cleanup` supports bounded local maintenance.
 - Renderer smoke coverage checks startup, reconnect, event reactions, custom pet loading, and fallback behavior without launching Electron.
+- Live overlay verification is documented separately because renderer/package smokes do not prove WSL-to-Windows launch, visible animation, tray grouping, or attention-state behavior in Electron.
 - Animated custom pets can be validated, imported into `~/.hermes_pet/custom-pets`, selected, listed, and removed with `hermes-pet custom-pet ...`.
 - The bridge sends selected custom pet metadata to the overlay, and the renderer can load custom package frames from the local custom pet path.
+- Custom pet docs include temporary-state preview and minimal-template workflows.
 - A repo-local Codex skill exists at `.codex/skills/hermes-pet-hatch/SKILL.md` for creating Hermes-compatible custom pet packages.
 - `hermes-pet doctor` checks CLI, bridge, overlay, state, prefs, and job history.
 - `hermes-pet doctor --strict` returns non-zero when any doctor check warns.
@@ -112,6 +114,7 @@ hpbrief
 - The bridge must be reachable for live overlay events; local event/job history still records when the bridge is unavailable.
 - Custom pet `idle` is required; missing optional states rely on renderer fallback behavior.
 - Custom pet selection is local state only and does not add the pet to built-in gacha species metadata.
+- Backups must copy `${HERMES_PET_HOME:-~/.hermes_pet}` directly; state export is redacted diagnostics and is not restorable backup data.
 - `doctor` returns success even with warnings by default, so read the warning lines for daily use; use `doctor --strict` for CI-style failure on warnings.
 - `retry` only targets the latest failed job and refuses redacted sensitive commands.
 - The smoke script intentionally creates one successful job and one expected failed job in the active state directory; use `--temp-state` to isolate that history.
@@ -120,6 +123,6 @@ hpbrief
 ## Next Recommended Improvements
 
 - Expand automated CLI tests around parser behavior, wrapped command execution, and brief formatting.
-- Add browser-level overlay smoke checks for live Electron rendering.
-- Add a visual package preview command for custom pets.
-- Document a regular backup path for `~/.hermes_pet`.
+- Add deeper live overlay checks for drag ergonomics, always-on-top behavior, and multi-monitor/DPI setups.
+- Add richer custom pet preview controls such as playback speed and side-by-side state comparison.
+- Add an automated backup helper around `${HERMES_PET_HOME:-~/.hermes_pet}` once the manual copy/restore workflow has enough field use.

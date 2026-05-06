@@ -24,6 +24,12 @@ scripts/smoke-hermes-pet.sh --temp-state
 hermes-pet doctor
 ```
 
+These checks cover different confidence layers. The renderer smoke is headless
+logic coverage, custom-pet validation/package commands prove package structure,
+and `scripts/smoke-hermes-pet.sh --temp-state` proves CLI/state behavior in an
+isolated state directory. They do not replace the live WSL/Windows overlay
+verification in `OPERATOR_GUIDE.md`.
+
 For custom package checks, validate an existing package or create a temporary built-in fixture:
 
 ```bash
@@ -42,6 +48,11 @@ scripts/smoke-github-install.sh
 Set `HERMES_PET_INSTALL_TARGET` when rehearsing a branch, tag, fork, or local
 path with the same script.
 
+Before release, run the live overlay checklist from `OPERATOR_GUIDE.md` with the
+real Electron window visible. Capture evidence for launch/replace, visible
+sprite animation, tray grouping, attention borders, reconnect, quiet/profile
+behavior, and custom pet fallback or preview.
+
 ## Installability
 
 - Confirm `pyproject.toml` exposes `hermes-pet` and `hermes-pet-bridge`.
@@ -56,7 +67,9 @@ path with the same script.
 - No obvious secrets are tracked.
 - Custom pet names, state folders, and PNG frame filenames reject traversal or unsafe names.
 - The bridge defaults to `127.0.0.1`.
+- `hermes-pet state export` is documented as redacted diagnostics, not backup.
+- Backup/restore docs copy `${HERMES_PET_HOME:-~/.hermes_pet}` directly and preserve the current state before restore.
 
 ## Known Release Gaps
 
-- Rich custom package visual preview tooling is still missing.
+- Custom package preview exists, but richer playback controls and side-by-side state comparison remain future improvements.

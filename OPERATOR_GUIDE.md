@@ -50,6 +50,13 @@ Use this checklist before calling Phase 2 overlay behavior ready. Run it from
 WSL/Windows with the real Electron overlay visible, not just renderer smoke
 coverage.
 
+Renderer and package smokes are necessary but narrower. `node scripts/smoke-renderer.js`
+checks renderer logic without Electron, custom pet package validation checks the package
+contract, and `scripts/smoke-hermes-pet.sh --temp-state` checks CLI/state behavior.
+This live checklist is the verifier for the full bridge-to-Electron path: launch,
+visibility, animation framing, tray behavior, attention borders, reconnect, and
+real custom pet loading.
+
 Start from a known-good live overlay:
 
 ```bash
@@ -140,6 +147,28 @@ hermes-pet custom-pet import docs/fixtures/custom-pets/minimal-spark --name mini
 hermes-pet custom-pet use minimal-spark
 hermes-pet launch --replace
 ```
+
+Preview a new package without changing your daily state:
+
+```bash
+hermes-pet custom-pet preview <path> --output /tmp/custom-pet-preview.html
+```
+
+For live overlay behavior, import it into a temporary `HERMES_PET_HOME`:
+
+```bash
+preview_home="$(mktemp -d)"
+HERMES_PET_HOME="$preview_home" hermes-pet custom-pet validate <path>
+HERMES_PET_HOME="$preview_home" hermes-pet custom-pet import <path> --name preview-pet
+HERMES_PET_HOME="$preview_home" hermes-pet custom-pet preview --installed preview-pet --output /tmp/preview-pet.html
+HERMES_PET_HOME="$preview_home" hermes-pet custom-pet use preview-pet
+HERMES_PET_HOME="$preview_home" hermes-pet launch --replace
+```
+
+For generated pets, inspect the contact sheet first when the package includes one.
+For hand-built templates, start with the copyable template in
+`docs/templates/custom-pets/basic`: `custom-pet.json`, `sprites/idle/`,
+and safe PNG frame names.
 
 ## Wrapping Work
 
@@ -343,4 +372,30 @@ hermes-pet state export --since 24h
 hermes-pet state cleanup --dry-run --keep-jobs 50 --keep-events 100
 ```
 
-State is stored under `~/.hermes_pet` by default. Set `HERMES_PET_HOME` only when you intentionally want a separate pet state.
+`state export` is for redacted diagnostics. It is useful to share a compact
+support snapshot, but it drops or redacts information and is not restorable as
+local state.
+
+State is stored under `~/.hermes_pet` by default. Set `HERMES_PET_HOME` only when
+you intentionally want a separate pet state. To back up the active state, copy
+the directory itself:
+
+```bash
+hermes-pet close --bridge
+state_home="${HERMES_PET_HOME:-$HOME/.hermes_pet}"
+backup_dir="$HOME/hermes-pet-backups/hermes-pet-$(date +%Y%m%d-%H%M%S)"
+mkdir -p "$(dirname "$backup_dir")"
+cp -a "$state_home" "$backup_dir"
+```
+
+To restore, close Hermes Pets, preserve the current directory, copy the backup
+back, and verify before using it:
+
+```bash
+hermes-pet close --bridge
+state_home="${HERMES_PET_HOME:-$HOME/.hermes_pet}"
+mv "$state_home" "${state_home}.before-restore.$(date +%Y%m%d-%H%M%S)"
+cp -a "$backup_dir" "$state_home"
+hermes-pet doctor
+hermes-pet launch --replace
+```

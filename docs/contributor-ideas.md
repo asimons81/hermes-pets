@@ -2,12 +2,13 @@
 
 Starter issue ideas for Hermes Pets:
 
-- Add a custom pet example fixture.
+- Add more custom pet example fixtures.
 - Add overlay screenshots or GIFs.
-- Add a fresh GitHub install smoke script.
+- Add richer demo capture examples for launch, attention states, tray grouping, and custom pet preview.
 - Improve bridge unavailable messaging.
 - Document WSL-to-Windows overlay launch.
-- Add a custom pet preview command proposal.
-- Add an example pet template folder.
+- Improve `custom-pet preview` with playback controls and side-by-side comparison.
+- Add a fuller example pet template folder with optional animation states.
 - Improve bubble animation timing.
-- Add a troubleshooting guide.
+- Add an automated backup helper for `${HERMES_PET_HOME:-~/.hermes_pet}`.
+- Extend live overlay verification to cover drag ergonomics and multi-monitor/DPI setups.

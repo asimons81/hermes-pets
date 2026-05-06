@@ -1,0 +1,14 @@
+{
+  "name": "basic",
+  "source_format": "custom-pet",
+  "states": {
+    "idle": {
+      "fps": 1,
+      "frames": [
+        "idle_00.png"
+      ],
+      "loop": true
+    }
+  },
+  "version": 1
+}

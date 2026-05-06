@@ -107,6 +107,33 @@ def test_import_select_and_list_custom_pet(tmp_path) -> None:
     ]
 
 
+def test_preview_installed_custom_pet_writes_html(tmp_path, monkeypatch, capsys) -> None:
+    source = _make_custom_pet(tmp_path)
+    import_package(source, name="operator", base_dir=tmp_path)
+    output = tmp_path / "preview.html"
+    monkeypatch.setattr(cli, "_state_dir", lambda: tmp_path)
+
+    assert cli._cmd_custom_pet_preview(
+        argparse.Namespace(path="", installed="operator", name=None, output=str(output), open=False, no_open=True)
+    ) == 0
+
+    assert output.is_file()
+    assert "data:image/png;base64," in output.read_text(encoding="utf-8")
+    text = capsys.readouterr().out
+    assert "Custom pet preview: operator" in text
+    assert "run_right" in text
+
+
+def test_preview_rejects_invalid_custom_pet(tmp_path) -> None:
+    bad_package = tmp_path / "bad"
+    bad_package.mkdir()
+
+    with pytest.raises(cli.PetCLIError, match="Custom pet preview failed"):
+        cli._cmd_custom_pet_preview(
+            argparse.Namespace(path=str(bad_package), installed="", name=None, output="", open=False, no_open=True)
+        )
+
+
 def test_validate_pet_name_rejects_paths_and_bad_prefixes() -> None:
     assert validate_pet_name("demo_pet-1") == "demo_pet-1"
     assert validate_pet_name("Upper") == "upper"

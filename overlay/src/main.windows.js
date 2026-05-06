@@ -28,6 +28,7 @@ const PET_SPECIES = process.env.HERMES_PET_SPECIES || 'cat';
 const DEBUG_EVENTS = process.env.HERMES_PET_DEBUG_EVENTS === '1';
 const DEBUG_ANIMATION = process.env.HERMES_PET_DEBUG_ANIMATION === '1';
 const DEBUG_DRAG = process.env.HERMES_PET_DEBUG_DRAG === '1';
+const VERIFY_FILE = process.env.HERMES_PET_OVERLAY_VERIFY_FILE || '';
 
 let lastSpriteRect = DEFAULT_SPRITE_RECT;
 
@@ -48,6 +49,44 @@ if (!hasSingleInstanceLock) {
 
 function debugEvent(message, ...args) {
   if (DEBUG_EVENTS) console.log(`[pet-overlay/events] ${message}`, ...args);
+}
+
+function verifyEvent(type, payload = {}) {
+  if (!VERIFY_FILE) return;
+  try {
+    fs.mkdirSync(path.dirname(VERIFY_FILE), { recursive: true });
+    fs.appendFileSync(
+      VERIFY_FILE,
+      JSON.stringify({ type, pid: process.pid, at: new Date().toISOString(), ...payload }) + '\n',
+      'utf8',
+    );
+  } catch (e) {
+    if (DEBUG_EVENTS) console.warn(`[pet-overlay/events] verify write failed: ${e.message}`);
+  }
+}
+
+function verifyRendererSnapshot(reason) {
+  if (!VERIFY_FILE || !win || win.webContents.isDestroyed()) return;
+  win.webContents.executeJavaScript(`
+    (() => {
+      const smoke = window.__hermesPetRendererSmoke;
+      if (!smoke) return null;
+      const state = smoke.getState();
+      return {
+        species: state.species || '',
+        customPet: state.custom_pet && state.custom_pet.name || '',
+        animation: smoke.getCurrentAnimation(),
+        trayVisible: smoke.isTrayVisible(),
+        trayAttention: smoke.isTrayAttention(),
+        bubbleText: smoke.getBubbleText(),
+        recentTypes: smoke.getRecentEvents().map((event) => event.type),
+      };
+    })()
+  `).then((snapshot) => {
+    if (snapshot) verifyEvent('renderer-snapshot', { reason, snapshot });
+  }).catch((e) => {
+    verifyEvent('renderer-snapshot-error', { reason, error: e.message });
+  });
 }
 
 function bringOverlayToFront(reason) {
@@ -129,11 +168,14 @@ function createWindow() {
     win.webContents.executeJavaScript(
       "document.body.classList.add('overlay-mode')",
     ).catch(() => {});
+    verifyEvent('renderer-loaded');
+    setTimeout(() => verifyRendererSnapshot('renderer-loaded'), 250);
   });
 
   win.once('ready-to-show', () => {
     reassertOverlayOnTop('ready-to-show');
     win.showInactive();
+    verifyEvent('ready-to-show', { bounds: win.getBounds() });
   });
 
   let moveTimeout = null;
@@ -263,6 +305,12 @@ function connectBridge() {
       if (win) {
         win.webContents.send('pet-event', msg);
         debugEvent(`forwarded to renderer type=${msg?.type || 'unknown'}`);
+        verifyEvent('pet-event', {
+          eventType: msg?.type || 'unknown',
+          severity: msg?.severity || '',
+          hasCustomPet: Boolean(msg?.custom_pet),
+        });
+        setTimeout(() => verifyRendererSnapshot(`pet-event:${msg?.type || 'unknown'}`), 250);
       } else {
         debugEvent(`dropped renderer event type=${msg?.type || 'unknown'} reason=no-window`);
       }
@@ -286,6 +334,8 @@ function notifyBridgeConnected(connected) {
   if (bridgeConnected === connected) return;
   bridgeConnected = connected;
   debugEvent(`bridge connected state=${connected}`);
+  verifyEvent('bridge-connected', { connected });
+  setTimeout(() => verifyRendererSnapshot(`bridge-connected:${connected}`), 250);
   if (win) win.webContents.send('bridge-connected', connected);
 }
 

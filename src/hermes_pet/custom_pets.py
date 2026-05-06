@@ -7,7 +7,9 @@ import os
 import re
 import shutil
 import subprocess
+from base64 import b64encode
 from dataclasses import dataclass
+from html import escape
 from pathlib import Path
 from typing import Any
 
@@ -41,6 +43,24 @@ STATE_MAP = {
     "drag": ("drag", 4, True, None),
 }
 
+PREVIEW_STATE_ORDER = (
+    "idle",
+    "run_right",
+    "run_left",
+    "running",
+    "waiting",
+    "failed",
+    "review",
+    "waving",
+    "jumping",
+    "message_react",
+    "bubble_react",
+    "blink",
+    "hover",
+    "drag",
+)
+OPTIONAL_PREVIEW_STATES = tuple(state for state in PREVIEW_STATE_ORDER if state != "idle")
+
 
 @dataclass
 class CustomPetPackage:
@@ -48,6 +68,12 @@ class CustomPetPackage:
     name: str
     states: dict[str, dict[str, Any]]
     source_format: str
+
+
+def _canonical_state_order(states: set[str]) -> list[str]:
+    ordered = [state for state in PREVIEW_STATE_ORDER if state in states]
+    ordered.extend(sorted(states.difference(PREVIEW_STATE_ORDER)))
+    return ordered
 
 
 def custom_pets_dir(base_dir: Path | None = None) -> Path:
@@ -178,6 +204,196 @@ def inspect_package(path: str | Path, *, name: str | None = None) -> CustomPetPa
 
     source_format = "hatch-pet" if sprites_base.name == "frames" and (root / "final").exists() else "custom-pet"
     return CustomPetPackage(root=root, name=package_name, states=states, source_format=source_format)
+
+
+def _package_state_frame_paths(package: CustomPetPackage) -> dict[str, list[Path]]:
+    metadata = _load_metadata(package.root)
+    _, dirs = _state_dirs(package.root, metadata)
+    paths: dict[str, list[Path]] = {}
+    for state_dir in dirs:
+        hermes_state = STATE_MAP.get(state_dir.name, (state_dir.name, 4, True, None))[0]
+        if hermes_state not in package.states:
+            continue
+        source_frames = {frame.name: frame for frame in _frame_files(state_dir)}
+        ordered_paths = []
+        for frame_name in package.states[hermes_state].get("frames", []):
+            frame = source_frames.get(str(frame_name))
+            if frame and frame.is_file():
+                ordered_paths.append(frame)
+        if not ordered_paths:
+            ordered_paths = _frame_files(state_dir)
+        paths[hermes_state] = ordered_paths
+    return paths
+
+
+def custom_pet_preview_summary(package: CustomPetPackage) -> dict[str, Any]:
+    """Return a display-friendly custom pet state summary."""
+    frame_paths = _package_state_frame_paths(package)
+    states = []
+    for state in _canonical_state_order(set(package.states)):
+        cfg = package.states[state]
+        frames = [str(path) for path in frame_paths.get(state, [])]
+        states.append(
+            {
+                "name": state,
+                "fps": int(cfg.get("fps", 4) or 4),
+                "loop": bool(cfg.get("loop", True)),
+                "fallback": str(cfg.get("fallback") or ""),
+                "frame_count": len(cfg.get("frames", [])),
+                "frames": list(cfg.get("frames", [])),
+                "frame_paths": frames,
+            }
+        )
+    missing = [state for state in OPTIONAL_PREVIEW_STATES if state not in package.states]
+    return {
+        "name": package.name,
+        "path": str(package.root),
+        "source_format": package.source_format,
+        "states": states,
+        "missing_optional_states": missing,
+        "missing_fallback": "idle",
+    }
+
+
+def render_custom_pet_preview_html(package: CustomPetPackage) -> str:
+    """Render a standalone HTML animation preview for a validated package."""
+    summary = custom_pet_preview_summary(package)
+    frames_by_state: dict[str, list[dict[str, str]]] = {}
+    for state in summary["states"]:
+        frame_items = []
+        for path_text in state["frame_paths"]:
+            path = Path(path_text)
+            try:
+                data_uri = "data:image/png;base64," + b64encode(path.read_bytes()).decode("ascii")
+            except OSError:
+                continue
+            frame_items.append({"name": path.name, "src": data_uri})
+        frames_by_state[state["name"]] = frame_items
+
+    state_cards = []
+    for state in summary["states"]:
+        fallback = state["fallback"] or "none"
+        first_frame = frames_by_state.get(state["name"], [{}])[0].get("src", "")
+        state_cards.append(
+            f"""
+      <section class="state-card" data-state="{escape(state['name'])}">
+        <div class="sprite-stage">
+          <img alt="{escape(state['name'])} preview" src="{first_frame}" data-frame-index="0">
+        </div>
+        <h2>{escape(state['name'])}</h2>
+        <p>{state['frame_count']} frame(s), {state['fps']} fps, {'loop' if state['loop'] else 'one-shot'}, fallback: {escape(fallback)}</p>
+      </section>"""
+        )
+
+    missing = ", ".join(summary["missing_optional_states"]) or "none"
+    frames_json = json.dumps(frames_by_state)
+    state_meta_json = json.dumps({state["name"]: state for state in summary["states"]})
+    return f"""<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Hermes custom pet preview: {escape(package.name)}</title>
+  <style>
+    :root {{
+      color-scheme: dark;
+      font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      background: #101416;
+      color: #edf5f2;
+    }}
+    body {{
+      margin: 0;
+      padding: 28px;
+    }}
+    header {{
+      max-width: 960px;
+      margin: 0 auto 24px;
+    }}
+    h1 {{
+      margin: 0 0 8px;
+      font-size: 28px;
+      letter-spacing: 0;
+    }}
+    .meta {{
+      margin: 0;
+      color: #b8c9c3;
+      line-height: 1.5;
+      overflow-wrap: anywhere;
+    }}
+    .grid {{
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+      gap: 14px;
+      max-width: 960px;
+      margin: 0 auto;
+    }}
+    .state-card {{
+      border: 1px solid #334541;
+      border-radius: 8px;
+      background: #18211f;
+      padding: 14px;
+    }}
+    .sprite-stage {{
+      display: grid;
+      place-items: center;
+      height: 168px;
+      border-radius: 6px;
+      background:
+        linear-gradient(45deg, #22302c 25%, transparent 25%),
+        linear-gradient(-45deg, #22302c 25%, transparent 25%),
+        linear-gradient(45deg, transparent 75%, #22302c 75%),
+        linear-gradient(-45deg, transparent 75%, #22302c 75%);
+      background-size: 24px 24px;
+      background-position: 0 0, 0 12px, 12px -12px, -12px 0;
+    }}
+    img {{
+      max-width: 144px;
+      max-height: 144px;
+      image-rendering: pixelated;
+    }}
+    h2 {{
+      margin: 12px 0 4px;
+      font-size: 16px;
+      letter-spacing: 0;
+    }}
+    p {{
+      margin: 0;
+      color: #b8c9c3;
+      font-size: 14px;
+      line-height: 1.45;
+    }}
+  </style>
+</head>
+<body>
+  <header>
+    <h1>{escape(package.name)}</h1>
+    <p class="meta">Package: {escape(str(package.root))}<br>Format: {escape(package.source_format)}<br>Missing optional states: {escape(missing)}. Missing states fall back to idle in the overlay.</p>
+  </header>
+  <main class="grid">
+    {''.join(state_cards)}
+  </main>
+  <script>
+    const framesByState = {frames_json};
+    const stateMeta = {state_meta_json};
+    for (const card of document.querySelectorAll('.state-card')) {{
+      const state = card.dataset.state;
+      const img = card.querySelector('img');
+      const frames = framesByState[state] || [];
+      const meta = stateMeta[state] || {{}};
+      if (!img || frames.length === 0) continue;
+      let index = 0;
+      const interval = Math.max(80, Math.round(1000 / Math.max(1, Number(meta.fps || 4))));
+      window.setInterval(() => {{
+        if (!meta.loop && index >= frames.length - 1) return;
+        index = (index + 1) % frames.length;
+        img.src = frames[index].src;
+        img.dataset.frameIndex = String(index);
+      }}, interval);
+    }}
+  </script>
+</body>
+</html>
+"""
 
 
 def _copy_package_frames(package: CustomPetPackage, dest: Path) -> None:

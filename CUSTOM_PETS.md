@@ -40,6 +40,70 @@ hermes-pet custom-pet remove my-fox
 
 The bridge sends the selected custom pet package to the overlay on connect. If validation or loading fails, the overlay keeps using the built-in pet species.
 
+## Preview Workflow
+
+Generate a standalone HTML animation preview before importing a package:
+
+```bash
+hermes-pet custom-pet preview <path> --output /tmp/custom-pet-preview.html
+hermes-pet custom-pet preview --installed <name> --output /tmp/custom-pet-preview.html
+```
+
+The preview validates the package, embeds the available PNG frames, lists fps,
+loop/fallback settings, and calls out missing optional states. Missing optional
+states are valid and fall back to `idle` or the state's configured fallback.
+
+Use a temporary state directory when you also want to prove the same bridge and
+renderer path the real overlay uses:
+
+```bash
+preview_home="$(mktemp -d)"
+HERMES_PET_HOME="$preview_home" hermes-pet custom-pet validate <path>
+HERMES_PET_HOME="$preview_home" hermes-pet custom-pet import <path> --name preview-pet
+HERMES_PET_HOME="$preview_home" hermes-pet custom-pet preview --installed preview-pet --output /tmp/preview-pet.html
+HERMES_PET_HOME="$preview_home" hermes-pet custom-pet use preview-pet
+HERMES_PET_HOME="$preview_home" hermes-pet launch --replace
+HERMES_PET_HOME="$preview_home" hermes-pet emit bubble "Preview check"
+```
+
+This leaves your daily `${HERMES_PET_HOME:-~/.hermes_pet}` selection alone. Close
+the preview overlay when done:
+
+```bash
+HERMES_PET_HOME="$preview_home" hermes-pet close --bridge
+```
+
+When a generated package includes `contact-sheet.png`, inspect that first for
+obvious frame, scale, or cropping problems. The live preview is still the final
+check because it proves Electron can load the selected package and animate the
+fallbacks.
+
+## Template Workflow
+
+Use the repo template as the smallest hand-built starter package:
+
+```text
+docs/templates/custom-pets/basic/
+  custom-pet.json
+  sprites/
+    idle/
+      idle_00.png
+  README.md
+```
+
+Copy that folder outside the repo or into `output/`, rename the package in
+`custom-pet.json`, replace `sprites/idle/idle_00.png`, then add optional state
+folders as you create animation frames. Validate and preview after each
+meaningful change:
+
+```bash
+hermes-pet custom-pet validate output/hermes-pet-hatch/<slug>/package
+hermes-pet custom-pet preview output/hermes-pet-hatch/<slug>/package --output /tmp/<slug>-preview.html
+```
+
+Keep generated or experimental template work in `output/` so the repository does
+not collect local art runs.
+
 ## Create With Codex
 
 Use the repo-local skill:
@@ -96,5 +160,5 @@ generated pet run to the repository.
 
 ## Known Limitations
 
-- There is no rich visual preview command yet; use the generated contact sheet, validate the package, then import and launch the overlay for a live check.
+- Use `hermes-pet custom-pet preview` for an HTML animation check, then import into a temporary `HERMES_PET_HOME` and launch the overlay for a live check when desktop behavior matters.
 - Custom pet selection is local state under `~/.hermes_pet` and does not add the package to the built-in species manifest.

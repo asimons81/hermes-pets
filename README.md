@@ -16,7 +16,7 @@ The repo combines a Python CLI, a WebSocket bridge, local state under `~/.hermes
 - Generate a short local brief from recent jobs and events.
 - Diagnose bridge, overlay, state, prefs, and job-history health.
 
-Pet state and local history live under `~/.hermes_pet` by default. Set `HERMES_PET_HOME` when you intentionally want an isolated state directory.
+Pet state and local history live under `~/.hermes_pet` by default. Set `HERMES_PET_HOME` when you intentionally want an isolated state directory. Back up the directory itself when you need a restorable copy; `hermes-pet state export` is a redacted diagnostic snapshot, not a backup format.
 
 ## In action
 
@@ -120,6 +120,8 @@ Manage them with:
 ```bash
 hermes-pet custom-pet list
 hermes-pet custom-pet validate <path>
+hermes-pet custom-pet preview <path> --output /tmp/pet-preview.html
+hermes-pet custom-pet preview --installed <name> --output /tmp/pet-preview.html
 hermes-pet custom-pet import <path> --name <name>
 hermes-pet custom-pet use <name>
 hermes-pet custom-pet current
@@ -127,6 +129,8 @@ hermes-pet custom-pet remove <name>
 ```
 
 `<path>` can be a finalized `hatch-pet` run or a package with `custom-pet.json` and `sprites/<state>/*.png`. `idle` is required; optional states fall back to idle when missing. See `CUSTOM_PETS.md` for the package format and the repo-local Codex skill at `.codex/skills/hermes-pet-hatch/SKILL.md`.
+
+For a safe preview workflow, validate or package the pet, inspect the generated contact sheet when present, then run `hermes-pet custom-pet preview <path> --output /tmp/pet-preview.html`. To prove the bridge and renderer can load the package, import/select it inside a temporary `HERMES_PET_HOME` and run `scripts/verify-live-overlay.sh` or launch with `hermes-pet launch --replace`.
 
 ## Launch
 
@@ -349,11 +353,32 @@ Preferences live in `~/.hermes_pet/notification-prefs.json`.
 
 ## State Export and Cleanup
 
-Export a compact redacted snapshot of local prefs, pet state, jobs, and events:
+Export a compact redacted snapshot of local prefs, pet state, jobs, and events for diagnostics:
 
 ```bash
 hermes-pet state export --since 24h
 hermes-pet state export --output hermes-state.json
+```
+
+State export is intentionally not a backup. It redacts command and event details and only includes bounded history for support/debugging. To make a real restorable backup, copy the active state directory while Hermes Pets is closed or quiet:
+
+```bash
+hermes-pet close --bridge
+state_home="${HERMES_PET_HOME:-$HOME/.hermes_pet}"
+backup_dir="$HOME/hermes-pet-backups/hermes-pet-$(date +%Y%m%d-%H%M%S)"
+mkdir -p "$(dirname "$backup_dir")"
+cp -a "$state_home" "$backup_dir"
+```
+
+Restore by closing Hermes Pets, moving the current state aside, copying the backup back into place, and launching again:
+
+```bash
+hermes-pet close --bridge
+state_home="${HERMES_PET_HOME:-$HOME/.hermes_pet}"
+mv "$state_home" "${state_home}.before-restore.$(date +%Y%m%d-%H%M%S)"
+cp -a "$backup_dir" "$state_home"
+hermes-pet doctor
+hermes-pet launch --replace
 ```
 
 Compact bounded local history:
@@ -416,6 +441,13 @@ For Phase 2 readiness, also run the live manual overlay checklist in
 reactions, tray grouping and attention borders, quiet/profile behavior,
 reconnect handling, and custom pet fallback in the real Electron overlay.
 
+Treat the checks as complementary:
+
+- `scripts/smoke-hermes-pet.sh --temp-state` verifies CLI behavior, state writes, wrapping, brief generation, and bridge warnings without polluting daily state.
+- `scripts/smoke-github-install.sh` verifies a fresh install path and basic command surface in a clean virtualenv.
+- `node scripts/smoke-renderer.js` verifies renderer event-reaction logic, custom pet loading, and fallback behavior without starting Electron.
+- `scripts/verify-live-overlay.sh` is the scripted verifier for real WSL-to-Windows launch, visible animation, tray grouping, attention state, reconnect behavior, and custom pet fallback.
+
 Rehearse a non-editable install from the current checkout:
 
 ```bash
@@ -435,6 +467,8 @@ Run renderer behavior smoke coverage without launching Electron:
 ```bash
 node scripts/smoke-renderer.js
 ```
+
+Renderer smoke coverage is valuable but headless. It does not prove Electron launched, the Windows overlay is visible, the sprite is correctly framed on screen, or the bridge can deliver events to the live window.
 
 ## Shell Helpers
 

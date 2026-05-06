@@ -19,6 +19,7 @@ from __future__ import annotations
 
 import argparse
 import importlib
+import json
 from importlib import resources
 from importlib.resources.abc import Traversable
 import locale
@@ -31,6 +32,7 @@ import subprocess
 import sys
 import threading
 import time
+import webbrowser
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
 from typing import Callable
@@ -38,10 +40,13 @@ from typing import Callable
 from hermes_pet.custom_pets import (
     current_custom_pet,
     custom_pet_event_payload,
+    custom_pet_preview_summary,
+    custom_pets_dir,
     import_package,
     inspect_package,
     list_custom_pets,
     remove_custom_pet,
+    render_custom_pet_preview_html,
     set_current_custom_pet,
     validate_pet_name,
 )
@@ -824,6 +829,67 @@ def _cmd_custom_pet_validate(args: argparse.Namespace) -> int:
     print(f"Path:   {package.root}")
     print(f"Format: {package.source_format}")
     print(f"States: {', '.join(sorted(package.states))}")
+    return 0
+
+
+def _preview_output_path(package_name: str, output: str) -> Path:
+    if output:
+        path = Path(output).expanduser()
+        if path.exists() and path.is_dir():
+            return path / f"{package_name}-custom-pet-preview.html"
+        if not path.suffix:
+            return path / f"{package_name}-custom-pet-preview.html"
+        return path
+    return Path.cwd() / f"{package_name}-custom-pet-preview.html"
+
+
+def _cmd_custom_pet_preview(args: argparse.Namespace) -> int:
+    try:
+        installed_name = str(getattr(args, "installed", "") or "").strip()
+        path_arg = str(getattr(args, "path", "") or "").strip()
+        if installed_name and path_arg:
+            raise ValueError("choose either a package path or --installed, not both")
+        if installed_name:
+            name = validate_pet_name(installed_name)
+            package = inspect_package(custom_pets_dir(_state_dir()) / name, name=name)
+            source_label = f"installed custom pet {name}"
+        elif path_arg:
+            package = inspect_package(path_arg, name=getattr(args, "name", None))
+            source_label = str(package.root)
+        else:
+            raise ValueError("provide a package path or --installed <name>")
+    except Exception as exc:
+        raise PetCLIError(f"Custom pet preview failed: {exc}") from exc
+
+    output_path = _preview_output_path(package.name, str(getattr(args, "output", "") or ""))
+    output_path.parent.mkdir(parents=True, exist_ok=True)
+    output_path.write_text(render_custom_pet_preview_html(package), encoding="utf-8")
+
+    summary = custom_pet_preview_summary(package)
+    print(f"Custom pet preview: {summary['name']}")
+    print(f"Source: {source_label}")
+    print(f"Format: {summary['source_format']}")
+    print(f"HTML:   {output_path}")
+    print()
+    print("States")
+    for state in summary["states"]:
+        fallback = state["fallback"] or "none"
+        loop = "loop" if state["loop"] else "one-shot"
+        print(f"- {state['name']}: {state['frame_count']} frame(s), {state['fps']} fps, {loop}, fallback: {fallback}")
+    missing = summary["missing_optional_states"]
+    if missing:
+        print()
+        print(f"Missing optional states: {', '.join(missing)}")
+        print("Missing optional states fall back to idle in the overlay.")
+    else:
+        print()
+        print("Missing optional states: none")
+
+    if getattr(args, "open", False) and not getattr(args, "no_open", False):
+        try:
+            webbrowser.open(output_path.resolve().as_uri())
+        except Exception as exc:
+            print(f"⚠️ Could not open preview automatically: {exc}", file=sys.stderr)
     return 0
 
 
@@ -1863,6 +1929,15 @@ def _build_parser() -> argparse.ArgumentParser:
     custom_pet_validate.add_argument("path", help="Package, hatch-pet run, or sprites folder to validate.")
     custom_pet_validate.add_argument("--name", default=None, help="Optional name to validate against.")
     custom_pet_validate.set_defaults(func=_cmd_custom_pet_validate)
+
+    custom_pet_preview = custom_pet_sub.add_parser("preview", help="Generate an HTML animation preview for a custom pet.")
+    custom_pet_preview.add_argument("path", nargs="?", help="Package, hatch-pet run, or sprites folder to preview.")
+    custom_pet_preview.add_argument("--installed", default="", help="Preview an installed custom pet by name.")
+    custom_pet_preview.add_argument("--name", default=None, help="Optional package name to validate candidate paths against.")
+    custom_pet_preview.add_argument("--output", "-o", default="", help="Preview HTML file or output directory.")
+    custom_pet_preview.add_argument("--open", action="store_true", help="Open the generated preview HTML in the default browser.")
+    custom_pet_preview.add_argument("--no-open", action="store_true", help="Do not open the generated preview HTML.")
+    custom_pet_preview.set_defaults(func=_cmd_custom_pet_preview)
 
     custom_pet_import = custom_pet_sub.add_parser("import", help="Import a custom pet package into local state.")
     custom_pet_import.add_argument("path", help="Package, hatch-pet run, or sprites folder to import.")
