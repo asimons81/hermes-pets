@@ -411,6 +411,11 @@ Run the local smoke against an isolated state directory:
 scripts/smoke-hermes-pet.sh --temp-state
 ```
 
+For Phase 2 readiness, also run the live manual overlay checklist in
+`OPERATOR_GUIDE.md`. It covers `launch --replace`, job/message/brief event
+reactions, tray grouping and attention borders, quiet/profile behavior,
+reconnect handling, and custom pet fallback in the real Electron overlay.
+
 Rehearse a non-editable install from the current checkout:
 
 ```bash

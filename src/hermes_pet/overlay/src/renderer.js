@@ -409,6 +409,7 @@ let bubbleTimeout = null;
 let bubblePulseTimeout = null;
 let reactTimeout = null;
 let eventTrayTimeout = null;
+let eventTrayToken = 0;
 let lastMood = 'idle';
 let dragPointerId = null;
 let dragStart = null;
@@ -751,6 +752,8 @@ function renderRecentEvents() {
 
 function setEventTrayVisible(visible, autoHideMs) {
   if (!eventTrayEl) return;
+  eventTrayToken++;
+  var token = eventTrayToken;
   if (eventTrayTimeout) {
     clearTimeout(eventTrayTimeout);
     eventTrayTimeout = null;
@@ -759,6 +762,7 @@ function setEventTrayVisible(visible, autoHideMs) {
   eventTrayEl.classList.toggle('hidden', !visible);
   if (visible && autoHideMs) {
     eventTrayTimeout = setTimeout(function() {
+      if (token !== eventTrayToken) return;
       eventTrayEl.classList.add('hidden');
       eventTrayTimeout = null;
     }, autoHideMs);

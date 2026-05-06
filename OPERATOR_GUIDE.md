@@ -44,6 +44,68 @@ hermes-pet close
 
 Add `--bridge` only when you also want to stop the event bridge.
 
+## Phase 2 Manual Live Overlay Verification
+
+Use this checklist before calling Phase 2 overlay behavior ready. Run it from
+WSL/Windows with the real Electron overlay visible, not just renderer smoke
+coverage.
+
+Start from a known-good live overlay:
+
+```bash
+hermes-pet doctor
+hermes-pet launch --replace
+hermes-pet overlay-status
+```
+
+- Confirm `launch --replace` closes stale or duplicate overlays, leaves one
+  visible overlay connected to `ws://127.0.0.1:17473`, and does not leave an
+  orphaned Electron window after a second replace.
+- Emit or trigger `job_started` and confirm the pet enters the working/running
+  state, shows a concise job bubble or status card, and records the job in the
+  tray/history view.
+- Trigger `job_finished` with a successful wrapped command and confirm the pet
+  returns from working state, shows success feedback, and groups the completed
+  job with the prior start event instead of creating a confusing duplicate item.
+- Trigger `job_failed` with an expected failing wrapped command and confirm the
+  pet shows failure feedback, the tray item is easy to distinguish from success,
+  and the overlay attention border appears when the failure needs review.
+- Emit `approval_needed` and confirm the review/attention state is visible, the
+  tray groups the approval request clearly, and the attention border remains
+  noticeable without blocking the desktop.
+- Send `message_received` with `--urgent` and confirm it cuts through quiet or
+  muted non-critical handling, produces visible attention feedback, and remains
+  grouped with message activity in the tray.
+- Emit `daily_brief` with `hermes-pet brief --emit` and confirm the summary is
+  readable in the overlay, does not look urgent unless it contains urgent
+  content, and appears as brief activity in the tray.
+- Exercise tray grouping by creating a start, finish, failure, approval, urgent
+  message, and daily brief in one session; confirm related job events collapse
+  together while distinct attention types remain scannable.
+- Switch profiles with `hermes-pet profile focus`, `pairing`, `demo`, and
+  `silent`; confirm each profile changes bubble/attention behavior as expected
+  and `hermes-pet profile normal` restores ordinary behavior.
+- Toggle quiet modes with `hermes-pet quiet`, `hermes-pet quiet --silent`, and
+  `hermes-pet quiet --off`; confirm non-critical bubbles are reduced or hidden
+  while urgent messages, failures, and approvals still surface appropriately.
+- Test reconnect by stopping or closing the overlay/bridge boundary, restarting
+  with `hermes-pet launch` or `hermes-pet launch --replace`, and confirming new
+  events appear without needing to clear local state.
+- Select a valid custom pet, relaunch with `hermes-pet launch --replace`, and
+  confirm it animates for idle, work, success, failure, attention, and message
+  states. Then select or simulate an invalid/missing custom pet and confirm the
+  overlay falls back to the built-in pet instead of rendering blank.
+
+Useful manual event commands:
+
+```bash
+hermes-pet emit approval_needed "Manual approval check"
+hermes-pet message --source telegram --sender "Ada" --urgent "Production is blocked"
+hermes-pet brief --emit
+hermes-pet wrap --name "Manual success" -- true
+hermes-pet wrap --name "Manual failure" -- false
+```
+
 ## Daily Workflow
 
 Use the pet as a lightweight activity layer:
