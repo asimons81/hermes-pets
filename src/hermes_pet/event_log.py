@@ -99,3 +99,11 @@ def append_event(event: dict[str, Any], base_dir: str | Path | None = None) -> N
     events = load_events(base_dir)
     events.append(_clean_event(event))
     save_events(events, base_dir)
+
+
+def compact_events(*, base_dir: str | Path | None = None, keep: int = EVENT_LOG_LIMIT) -> dict[str, int]:
+    events = load_events(base_dir)
+    keep = max(0, min(int(keep), EVENT_LOG_LIMIT))
+    kept = events[-keep:] if keep else []
+    save_events(kept, base_dir)
+    return {"before": len(events), "after": len(kept), "removed": max(0, len(events) - len(kept))}

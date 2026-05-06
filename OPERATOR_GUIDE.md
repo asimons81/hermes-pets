@@ -117,6 +117,17 @@ hermes-pet message --source telegram --sender "Ada" --urgent "Production is bloc
 
 ## Quiet and Mute
 
+Use named profiles when you want predictable notification behavior:
+
+```bash
+hermes-pet profile --list
+hermes-pet profile normal
+hermes-pet profile focus
+hermes-pet profile pairing
+hermes-pet profile demo
+hermes-pet profile silent
+```
+
 Use quiet mode for fewer bubbles:
 
 ```bash
@@ -146,6 +157,7 @@ Inspect preferences:
 
 ```bash
 hermes-pet prefs
+hermes-pet prefs profile focus
 ```
 
 ## Checking Jobs
@@ -167,6 +179,13 @@ Show failures only:
 ```bash
 hermes-pet jobs --failed
 hermes-pet jobs --failed --last
+```
+
+Scan a subset by status or text:
+
+```bash
+hermes-pet jobs --status succeeded
+hermes-pet jobs --query tests
 ```
 
 ## Brief and Recap
@@ -258,6 +277,8 @@ Prefs or jobs look wrong:
 hermes-pet prefs
 hermes-pet jobs --last
 hermes-pet doctor
+hermes-pet state export --since 24h
+hermes-pet state cleanup --dry-run --keep-jobs 50 --keep-events 100
 ```
 
 State is stored under `~/.hermes_pet` by default. Set `HERMES_PET_HOME` only when you intentionally want a separate pet state.

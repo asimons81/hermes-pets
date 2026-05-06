@@ -145,12 +145,26 @@ def recent_jobs(
     *,
     base_dir: str | Path | None = None,
     failed_only: bool = False,
+    status: str | None = None,
+    query: str | None = None,
     limit: int | None = None,
     newest_first: bool = True,
 ) -> list[dict[str, Any]]:
     jobs = load_jobs(base_dir)
     if failed_only:
         jobs = [job for job in jobs if job.get("status") == "failed" or job.get("exit_code") not in (0, None)]
+    if status:
+        normalized = str(status).strip().lower()
+        if normalized == "failed":
+            jobs = [job for job in jobs if job.get("status") == "failed" or job.get("exit_code") not in (0, None)]
+        elif normalized in {"succeeded", "success"}:
+            jobs = [job for job in jobs if job.get("status") == "succeeded" or job.get("exit_code") == 0]
+        elif normalized not in {"all", "*"}:
+            jobs = [job for job in jobs if str(job.get("status") or "").lower() == normalized]
+    if query:
+        needle = str(query).strip().lower()
+        if needle:
+            jobs = [job for job in jobs if _job_search_text(job).find(needle) >= 0]
     if limit is not None:
         jobs = jobs[-max(0, limit):]
     if newest_first:
@@ -163,3 +177,37 @@ def latest_failed_job(base_dir: str | Path | None = None) -> dict[str, Any] | No
         if job.get("status") == "failed" or job.get("exit_code") not in (0, None):
             return job
     return None
+
+
+def _job_search_text(job: dict[str, Any]) -> str:
+    parts: list[str] = []
+    for key in ("id", "name", "status", "output_summary", "error_summary"):
+        value = job.get(key)
+        if value is not None:
+            parts.append(str(value))
+    command = job.get("command")
+    if isinstance(command, list):
+        parts.extend(str(part) for part in command)
+    elif command is not None:
+        parts.append(str(command))
+    return " ".join(parts).lower()
+
+
+def job_scan_summary(jobs: list[dict[str, Any]]) -> dict[str, int]:
+    failed = [job for job in jobs if job.get("status") == "failed" or job.get("exit_code") not in (0, None)]
+    succeeded = [job for job in jobs if job.get("status") == "succeeded" or job.get("exit_code") == 0]
+    retryable_failures = [job for job in failed if job.get("retryable") is not False and not job.get("command_redacted")]
+    return {
+        "total": len(jobs),
+        "succeeded": len(succeeded),
+        "failed": len(failed),
+        "retryable_failures": len(retryable_failures),
+    }
+
+
+def compact_jobs(*, base_dir: str | Path | None = None, keep: int = HISTORY_LIMIT) -> dict[str, int]:
+    jobs = load_jobs(base_dir)
+    keep = max(0, min(int(keep), HISTORY_LIMIT))
+    kept = jobs[-keep:] if keep else []
+    save_jobs(kept, base_dir)
+    return {"before": len(jobs), "after": len(kept), "removed": max(0, len(jobs) - len(kept))}

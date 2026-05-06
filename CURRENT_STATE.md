@@ -1,6 +1,6 @@
 # Hermes Pets Current State
 
-Snapshot date: 2026-05-05
+Snapshot date: 2026-05-06
 
 ## What Works
 
@@ -15,7 +15,10 @@ Snapshot date: 2026-05-05
 - `hermes-pet retry` reruns the latest safe failed wrapped command.
 - `hermes-pet message` emits external message notifications with source, sender, urgency, and optional open-command metadata.
 - Quiet, silent, mute, and preference controls exist.
+- Named notification profiles exist for normal, focus, pairing, demo, and silent workflows.
 - `hermes-pet brief` summarizes recent jobs and events.
+- `hermes-pet state export` and `hermes-pet state cleanup` support compact local recovery and maintenance.
+- Renderer smoke coverage checks startup, reconnect, event reactions, custom pet loading, and fallback behavior without launching Electron.
 - Animated custom pets can be validated, imported into `~/.hermes_pet/custom-pets`, selected, listed, and removed with `hermes-pet custom-pet ...`.
 - The bridge sends selected custom pet metadata to the overlay, and the renderer can load custom package frames from the local custom pet path.
 - A repo-local Codex skill exists at `.codex/skills/hermes-pet-hatch/SKILL.md` for creating Hermes-compatible custom pet packages.
@@ -50,11 +53,15 @@ hermes-pet quiet
 hermes-pet quiet --silent
 hermes-pet quiet --off
 hermes-pet mute 30m
+hermes-pet profile focus
 hermes-pet prefs
+hermes-pet state export --since 24h
+hermes-pet state cleanup --dry-run
 hermes-pet brief --since 24h
 hermes-pet brief --emit
 hermes-pet doctor
 hermes-pet doctor --strict
+node scripts/smoke-renderer.js
 scripts/smoke-hermes-pet.sh --temp-state
 scripts/smoke-github-install.sh
 ```
@@ -91,6 +98,7 @@ hpbrief
 - `overlay/scripts/launch-windows-overlay.ps1`: Windows single-instance launcher.
 - `shell-helpers/hermes-pet.bash`: Bash aliases/functions.
 - `scripts/smoke-hermes-pet.sh`: smoke verification script.
+- `scripts/smoke-renderer.js`: dependency-free renderer behavior smoke check.
 - `scripts/smoke-github-install.sh`: fresh virtualenv install smoke for the public GitHub install path.
 - `scripts/validate-custom-pet.py`: custom pet package validator.
 - `scripts/package-custom-pet.py`: custom pet package helper for hatch runs and built-in fixtures.
@@ -112,7 +120,6 @@ hpbrief
 ## Next Recommended Improvements
 
 - Expand automated CLI tests around parser behavior, wrapped command execution, and brief formatting.
-- Add a compact cleanup/export command for state, prefs, event history, and jobs.
-- Add richer renderer tests or browser-level overlay smoke checks for sprite visibility and event reactions.
+- Add browser-level overlay smoke checks for live Electron rendering.
 - Add a visual package preview command for custom pets.
 - Document a regular backup path for `~/.hermes_pet`.

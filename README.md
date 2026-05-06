@@ -253,6 +253,8 @@ Show recent jobs:
 ```bash
 hermes-pet jobs
 hermes-pet jobs --limit 50
+hermes-pet jobs --status succeeded
+hermes-pet jobs --query tests
 ```
 
 Inspect the latest job:
@@ -298,6 +300,16 @@ hermes-pet message --source telegram --sender "Ada" --open-command "xdg-open htt
 
 ## Quiet, Mute, and Prefs
 
+Named notification profiles:
+
+```bash
+hermes-pet profile --list
+hermes-pet profile focus
+hermes-pet profile pairing
+hermes-pet profile demo
+hermes-pet profile silent
+```
+
 Important-only quiet mode:
 
 ```bash
@@ -327,12 +339,29 @@ Inspect or update preferences:
 
 ```bash
 hermes-pet prefs
+hermes-pet prefs profile focus
 hermes-pet prefs set quiet_mode important
 hermes-pet prefs set bubble_throttle_seconds 5
 hermes-pet prefs set show_idle_bubbles false
 ```
 
 Preferences live in `~/.hermes_pet/notification-prefs.json`.
+
+## State Export and Cleanup
+
+Export a compact redacted snapshot of local prefs, pet state, jobs, and events:
+
+```bash
+hermes-pet state export --since 24h
+hermes-pet state export --output hermes-state.json
+```
+
+Compact bounded local history:
+
+```bash
+hermes-pet state cleanup --dry-run --keep-jobs 50 --keep-events 100
+hermes-pet state cleanup --keep-jobs 50 --keep-events 100
+```
 
 ## Brief
 
@@ -395,6 +424,12 @@ scripts/smoke-github-install.sh
 ```
 
 Set `HERMES_PET_INSTALL_TARGET` to test a branch, tag, fork, or local path with the same fresh-install smoke script.
+
+Run renderer behavior smoke coverage without launching Electron:
+
+```bash
+node scripts/smoke-renderer.js
+```
 
 ## Shell Helpers
 

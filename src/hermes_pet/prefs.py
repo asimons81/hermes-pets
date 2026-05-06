@@ -9,8 +9,43 @@ from pathlib import Path
 from typing import Any
 
 QUIET_MODES = {"off", "important", "silent"}
+NOTIFICATION_PROFILES = {"normal", "focus", "pairing", "demo", "silent"}
+
+NOTIFICATION_PROFILE_DEFAULTS: dict[str, dict[str, object]] = {
+    "normal": {
+        "quiet_mode": "off",
+        "bubble_throttle_seconds": 2.5,
+        "show_tray_on_urgent": True,
+        "show_idle_bubbles": True,
+    },
+    "focus": {
+        "quiet_mode": "important",
+        "bubble_throttle_seconds": 8.0,
+        "show_tray_on_urgent": True,
+        "show_idle_bubbles": False,
+    },
+    "pairing": {
+        "quiet_mode": "off",
+        "bubble_throttle_seconds": 1.0,
+        "show_tray_on_urgent": True,
+        "show_idle_bubbles": True,
+    },
+    "demo": {
+        "quiet_mode": "off",
+        "bubble_throttle_seconds": 0.5,
+        "show_tray_on_urgent": True,
+        "show_idle_bubbles": False,
+    },
+    "silent": {
+        "quiet_mode": "silent",
+        "bubble_throttle_seconds": 30.0,
+        "show_tray_on_urgent": False,
+        "show_idle_bubbles": False,
+    },
+}
 
 DEFAULT_PREFS: dict[str, object] = {
+    "notification_profile": "normal",
     "muted_until": None,
     "quiet_mode": "off",
     "bubble_throttle_seconds": 2.5,
@@ -54,10 +89,30 @@ def format_timestamp(value: datetime | None) -> str | None:
     return value.astimezone(timezone.utc).isoformat(timespec="seconds").replace("+00:00", "Z")
 
 
+def normalize_notification_profile(value: object) -> str:
+    profile = str(value or "normal").strip().lower().replace("-", "_")
+    return profile if profile in NOTIFICATION_PROFILES else "normal"
+
+
+def _profile_from_legacy_quiet_mode(raw: dict[str, Any] | None) -> str:
+    if not raw or "notification_profile" in raw:
+        return normalize_notification_profile((raw or {}).get("notification_profile"))
+    quiet_mode = str(raw.get("quiet_mode") or "off").strip().lower()
+    if quiet_mode == "silent":
+        return "silent"
+    if quiet_mode == "important":
+        return "focus"
+    return "normal"
+
+
 def normalize_prefs(raw: dict[str, Any] | None = None, *, now: datetime | None = None) -> dict[str, object]:
     prefs = dict(DEFAULT_PREFS)
+    profile = _profile_from_legacy_quiet_mode(raw)
+    prefs.update(NOTIFICATION_PROFILE_DEFAULTS[profile])
+    prefs["notification_profile"] = profile
     if raw:
         prefs.update({key: value for key, value in raw.items() if key in DEFAULT_PREFS})
+        prefs["notification_profile"] = normalize_notification_profile(prefs.get("notification_profile"))
 
     quiet_mode = str(prefs.get("quiet_mode") or "off").strip().lower()
     prefs["quiet_mode"] = quiet_mode if quiet_mode in QUIET_MODES else "off"
@@ -103,7 +158,21 @@ def set_quiet_mode(mode: str, base_dir: Path | None = None) -> dict[str, object]
         raise ValueError(f"quiet_mode must be one of: {allowed}")
     prefs = load_prefs(base_dir)
     prefs["quiet_mode"] = normalized
+    prefs["notification_profile"] = {"off": "normal", "important": "focus", "silent": "silent"}[normalized]
     if normalized == "off":
+        prefs["muted_until"] = None
+    return save_prefs(prefs, base_dir)
+
+
+def apply_notification_profile(profile: str, base_dir: Path | None = None) -> dict[str, object]:
+    normalized = normalize_notification_profile(profile)
+    if normalized != str(profile or "").strip().lower().replace("-", "_"):
+        allowed = ", ".join(sorted(NOTIFICATION_PROFILES))
+        raise ValueError(f"notification profile must be one of: {allowed}")
+    prefs = load_prefs(base_dir)
+    prefs.update(NOTIFICATION_PROFILE_DEFAULTS[normalized])
+    prefs["notification_profile"] = normalized
+    if normalized != "silent":
         prefs["muted_until"] = None
     return save_prefs(prefs, base_dir)
 

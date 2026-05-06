@@ -16,6 +16,7 @@ const connectionStatusEl = document.getElementById('connection-status');
 const eventTrayEl = document.getElementById('event-tray');
 const eventListEl = document.getElementById('event-list');
 const currentStatusEl = document.getElementById('current-status');
+const eventSummaryEl = document.getElementById('event-summary');
 const DEBUG_EVENTS = new URLSearchParams(window.location.search).get('debugEvents') === '1';
 
 function debugEvent(message, ...args) {
@@ -90,7 +91,8 @@ const animController = {
   },
 
   _preloadKey(key, src) {
-    if (this._preloaded[key] || this._unavailable[key]) return;
+    if (this._preloaded[key]) return Promise.resolve(true);
+    if (this._unavailable[key]) return Promise.resolve(false);
     return new Promise(function(resolve) {
       var img = new Image();
       img.onload = function() { resolve(true); };
@@ -416,6 +418,7 @@ const RECENT_EVENT_LIMIT = 6;
 const BUBBLE_THROTTLE_MS = 2500;
 const STATUS_THROTTLE_MS = 5000;
 const DEFAULT_NOTIFICATION_PREFS = {
+  notification_profile: 'normal',
   muted_until: null,
   quiet_mode: 'off',
   bubble_throttle_seconds: BUBBLE_THROTTLE_MS / 1000,
@@ -424,7 +427,9 @@ const DEFAULT_NOTIFICATION_PREFS = {
 };
 const recentEvents = [];
 const lastBubbleByKey = Object.create(null);
+const lastBubbleByChannel = Object.create(null);
 let notificationPrefs = { ...DEFAULT_NOTIFICATION_PREFS };
+let trayAttention = false;
 
 // ---- Sprite setters ----
 const ASSET_BASE = '../assets/sprites';
@@ -583,15 +588,27 @@ function eventSeverity(msg) {
   var severityByType = {
     job_finished: 'success',
     job_failed: 'error',
-    approval_needed: 'warning'
+    approval_needed: 'warning',
+    message_received: msg.urgent ? 'warning' : 'info'
   };
   return severityByType[msg.type] || 'info';
+}
+
+function eventGroup(msg) {
+  if (msg.type === 'job_failed' || msg.type === 'job_finished' || msg.type === 'job_started') return 'jobs';
+  if (msg.type === 'message_received') return 'messages';
+  if (msg.type === 'approval_needed') return 'approvals';
+  if (msg.type === 'daily_brief') return 'briefs';
+  return 'status';
 }
 
 function normalizeNotificationPrefs(prefs) {
   var next = { ...DEFAULT_NOTIFICATION_PREFS };
   if (prefs && typeof prefs === 'object') {
     Object.assign(next, prefs);
+  }
+  if (!['normal', 'focus', 'pairing', 'demo', 'silent'].includes(next.notification_profile)) {
+    next.notification_profile = 'normal';
   }
   if (!['off', 'important', 'silent'].includes(next.quiet_mode)) {
     next.quiet_mode = 'off';
@@ -632,6 +649,7 @@ function recordRecentEvent(msg) {
   var item = {
     id: msg.id || String(Date.now()) + '-' + recentEvents.length,
     type: msg.type,
+    group: eventGroup(msg),
     text: eventText(msg),
     severity: eventSeverity(msg),
     createdAt: msg.created_at || new Date().toISOString()
@@ -668,6 +686,7 @@ function recordJobHistory(msg) {
     recentEvents.unshift({
       id: job.id || String(Date.now()) + '-job',
       type: failed ? 'job_failed' : 'job_finished',
+      group: 'jobs',
       text: jobHistoryText(job),
       severity: failed ? 'error' : 'success',
       createdAt: job.finished_at || job.started_at || msg.created_at || new Date().toISOString()
@@ -680,6 +699,26 @@ function recordJobHistory(msg) {
 function renderRecentEvents() {
   if (!eventListEl) return;
   if (currentStatusEl) currentStatusEl.textContent = state.currentStatus || 'Idle';
+  var summary = { jobs: 0, messages: 0, approvals: 0, briefs: 0, status: 0 };
+  var attention = false;
+  recentEvents.forEach(function(item) {
+    var group = item.group || eventGroup(item);
+    summary[group] = (summary[group] || 0) + 1;
+    attention = attention || item.severity === 'error' || item.severity === 'warning';
+  });
+  trayAttention = attention;
+  if (eventSummaryEl) {
+    var parts = [];
+    if (summary.jobs) parts.push(summary.jobs + ' job' + (summary.jobs === 1 ? '' : 's'));
+    if (summary.messages) parts.push(summary.messages + ' msg' + (summary.messages === 1 ? '' : 's'));
+    if (summary.approvals) parts.push(summary.approvals + ' approval' + (summary.approvals === 1 ? '' : 's'));
+    if (summary.briefs) parts.push(summary.briefs + ' brief' + (summary.briefs === 1 ? '' : 's'));
+    eventSummaryEl.textContent = parts.length ? parts.join(' / ') : '0 recent';
+  }
+  if (eventTrayEl) {
+    eventTrayEl.classList.toggle('attention', trayAttention);
+    eventTrayEl.classList.toggle('quiet-profile', notificationPrefs.quiet_mode !== 'off');
+  }
   eventListEl.textContent = '';
   if (recentEvents.length === 0) {
     var empty = document.createElement('div');
@@ -696,7 +735,14 @@ function renderRecentEvents() {
     icon.textContent = eventIcon(item);
     var text = document.createElement('span');
     text.className = 'event-text';
-    text.textContent = item.text;
+    var title = document.createElement('span');
+    title.className = 'event-title';
+    title.textContent = item.text;
+    var meta = document.createElement('span');
+    meta.className = 'event-meta';
+    meta.textContent = titleCaseText(item.group || eventGroup(item));
+    text.appendChild(title);
+    text.appendChild(meta);
     row.appendChild(icon);
     row.appendChild(text);
     eventListEl.appendChild(row);
@@ -735,6 +781,14 @@ function isCriticalEvent(msg) {
     (msg.type === 'message_received' && !!msg.urgent);
 }
 
+function bubbleChannelForEvent(msg) {
+  if (msg.type === 'status') return 'status';
+  if (msg.type === 'job_started') return 'job_lifecycle';
+  if (msg.type === 'job_finished') return 'job_success';
+  if (msg.type === 'daily_brief') return 'brief';
+  return msg.type || 'event';
+}
+
 function shouldShowEventBubble(msg) {
   var critical = isCriticalEvent(msg);
   if (mutedNow() && !critical) return false;
@@ -743,11 +797,15 @@ function shouldShowEventBubble(msg) {
   var now = Date.now();
   var text = eventText(msg);
   var key = msg.type + '|' + text;
+  var channel = bubbleChannelForEvent(msg);
   var prefThrottleMs = Math.round(Number(notificationPrefs.bubble_throttle_seconds) * 1000);
   var minDelay = msg.type === 'status' ? Math.max(STATUS_THROTTLE_MS, prefThrottleMs) : prefThrottleMs;
   var last = lastBubbleByKey[key] || 0;
   if (now - last < minDelay) return false;
+  var lastChannel = lastBubbleByChannel[channel] || 0;
+  if (now - lastChannel < minDelay) return false;
   lastBubbleByKey[key] = now;
+  lastBubbleByChannel[channel] = now;
   return true;
 }
 
@@ -766,18 +824,39 @@ function bubbleTextForEvent(msg) {
 }
 
 function transitionForEvent(msg) {
-  var animationByType = {
-    bubble: 'bubble_react',
-    status: 'review',
-    job_started: 'running',
-    job_finished: 'jumping',
-    job_failed: 'failed',
-    approval_needed: 'review',
-    message_received: 'message_react',
-    daily_brief: 'waving'
-  };
-  var next = animationByType[msg.type];
-  if (next) animController.transition(next);
+  var next = eventReactionFor(msg).animation;
+  if (next) {
+    if (isCriticalEvent(msg) && animController._playingOneShot) {
+      animController._playingOneShot = false;
+    }
+    animController.transition(next);
+  }
+}
+
+function eventReactionFor(msg) {
+  var severity = eventSeverity(msg);
+  if (msg.type === 'job_failed' || severity === 'error') {
+    return { animation: 'failed', reactionMs: 1100, trayMs: 9000 };
+  }
+  if (msg.type === 'approval_needed') {
+    return { animation: 'review', reactionMs: 950, trayMs: 0 };
+  }
+  if (msg.type === 'job_started') {
+    return { animation: 'running', reactionMs: 700, trayMs: 0 };
+  }
+  if (msg.type === 'job_finished') {
+    return { animation: 'jumping', reactionMs: 900, trayMs: 5000 };
+  }
+  if (msg.type === 'message_received') {
+    return { animation: msg.urgent ? 'waving' : 'message_react', reactionMs: 850, trayMs: msg.urgent ? 8000 : 0 };
+  }
+  if (msg.type === 'daily_brief') {
+    return { animation: 'waving', reactionMs: 750, trayMs: 6000 };
+  }
+  if (msg.type === 'status') {
+    return { animation: severity === 'warning' ? 'review' : 'waiting', reactionMs: 650, trayMs: 0 };
+  }
+  return { animation: 'bubble_react', reactionMs: 850, trayMs: 0 };
 }
 
 function rememberStatus(msg) {
@@ -797,16 +876,25 @@ function rememberStatus(msg) {
 function handleAmbientEvent(msg) {
   rememberStatus(msg);
   recordRecentEvent(msg);
+  var reaction = eventReactionFor(msg);
   transitionForEvent(msg);
-  triggerReaction(850);
+  triggerReaction(reaction.reactionMs || 850);
   if (shouldShowEventBubble(msg)) {
     showBubble(bubbleTextForEvent(msg), msg.duration || 3800);
   }
-  if (msg.type === 'approval_needed' || msg.type === 'job_failed' || (msg.urgent && notificationPrefs.show_tray_on_urgent) || msg.severity === 'warning') {
-    setEventTrayVisible(true, 6000);
+  if (shouldShowEventTray(msg)) {
+    setEventTrayVisible(true, reaction.trayMs || 6000);
   } else {
     renderRecentEvents();
   }
+}
+
+function shouldShowEventTray(msg) {
+  if (msg.type === 'approval_needed' || msg.type === 'job_failed') return true;
+  if (notificationPrefs.quiet_mode === 'silent' && !isCriticalEvent(msg)) return false;
+  if (msg.urgent) return notificationPrefs.show_tray_on_urgent;
+  if (msg.severity === 'warning') return notificationPrefs.show_tray_on_urgent;
+  return eventReactionFor(msg).trayMs > 0 && notificationPrefs.quiet_mode === 'off';
 }
 
 // ---- Bounce on click ----
@@ -1220,3 +1308,16 @@ animController.loadManifest().then(function() {
     animController.init(animController.species);
   }
 });
+
+if (DEBUG_EVENTS || new URLSearchParams(window.location.search).get('debugSmoke') === '1') {
+  window.__hermesPetRendererSmoke = {
+    handleEvent: handleEvent,
+    getState: function() { return { ...state }; },
+    getRecentEvents: function() { return recentEvents.slice(); },
+    getNotificationPrefs: function() { return { ...notificationPrefs }; },
+    getCurrentAnimation: function() { return animController.currentState; },
+    isTrayVisible: function() { return !!eventTrayEl && !eventTrayEl.classList.contains('hidden'); },
+    isTrayAttention: function() { return !!eventTrayEl && eventTrayEl.classList.contains('attention'); },
+    getBubbleText: function() { return bubbleTextEl ? bubbleTextEl.textContent : ''; }
+  };
+}

@@ -53,11 +53,14 @@ from hermes_pet.engine import (
     load_pet,
     save_pet,
 )
-from hermes_pet.event_log import append_event, load_events
+from hermes_pet.event_log import append_event, compact_events, load_events
 from hermes_pet.events import EVENT_TYPES, PetEventError, build_event
 from hermes_pet.jobs import (
+    HISTORY_LIMIT,
     OUTPUT_SUMMARY_LIMIT,
     append_job,
+    compact_jobs,
+    job_scan_summary,
     jobs_path,
     latest_failed_job,
     new_job_id,
@@ -66,7 +69,17 @@ from hermes_pet.jobs import (
     redact_text,
     utc_now_iso,
 )
-from hermes_pet.prefs import QUIET_MODES, load_prefs, mute_for, prefs_path, save_prefs, set_quiet_mode
+from hermes_pet.prefs import (
+    NOTIFICATION_PROFILE_DEFAULTS,
+    NOTIFICATION_PROFILES,
+    QUIET_MODES,
+    apply_notification_profile,
+    load_prefs,
+    mute_for,
+    prefs_path,
+    save_prefs,
+    set_quiet_mode,
+)
 
 RARITY_ORDER = {
     "common": 0,
@@ -971,6 +984,7 @@ def _format_pref_value(value: object) -> str:
 
 def _print_prefs(prefs: dict[str, object]) -> None:
     print("Notification prefs")
+    print(f"notification_profile:   {_format_pref_value(prefs.get('notification_profile'))}")
     print(f"quiet_mode:              {_format_pref_value(prefs.get('quiet_mode'))}")
     print(f"muted_until:             {_format_pref_value(prefs.get('muted_until'))}")
     print(f"bubble_throttle_seconds: {_format_pref_value(prefs.get('bubble_throttle_seconds'))}")
@@ -1003,7 +1017,41 @@ def _cmd_mute(args: argparse.Namespace) -> int:
     return 0
 
 
+def _print_profiles() -> None:
+    print("Notification profiles")
+    for name in sorted(NOTIFICATION_PROFILES):
+        defaults = NOTIFICATION_PROFILE_DEFAULTS[name]
+        print(
+            f"{name:8} quiet={defaults['quiet_mode']} "
+            f"throttle={defaults['bubble_throttle_seconds']}s "
+            f"tray={'on' if defaults['show_tray_on_urgent'] else 'off'} "
+            f"idle={'on' if defaults['show_idle_bubbles'] else 'off'}"
+        )
+
+
+def _cmd_profile(args: argparse.Namespace) -> int:
+    if getattr(args, "list", False):
+        _print_profiles()
+        return 0
+    profile = str(getattr(args, "profile", "") or "").strip().lower()
+    if not profile:
+        _print_prefs(load_prefs(_state_dir()))
+        return 0
+    try:
+        prefs = apply_notification_profile(profile, _state_dir())
+    except ValueError as exc:
+        raise PetCLIError(str(exc)) from exc
+    _notify_prefs_changed(prefs)
+    print(f"✅ Notification profile: {prefs['notification_profile']}")
+    return 0
+
+
 def _coerce_pref_value(key: str, value: str) -> object:
+    if key == "notification_profile":
+        profile = value.strip().lower().replace("-", "_")
+        if profile not in NOTIFICATION_PROFILES:
+            raise PetCLIError(f"notification_profile must be one of: {', '.join(sorted(NOTIFICATION_PROFILES))}")
+        return profile
     if key == "quiet_mode":
         mode = value.strip().lower()
         if mode not in QUIET_MODES:
@@ -1027,7 +1075,14 @@ def _coerce_pref_value(key: str, value: str) -> object:
 
 
 def _cmd_prefs(args: argparse.Namespace) -> int:
+    if getattr(args, "prefs_action", None) == "profile":
+        setattr(args, "profile", args.profile)
+        return _cmd_profile(args)
+
     if getattr(args, "prefs_action", None) == "set":
+        if str(args.key).strip() == "notification_profile":
+            setattr(args, "profile", args.value)
+            return _cmd_profile(args)
         prefs = load_prefs(_state_dir())
         key = str(args.key).strip()
         prefs[key] = _coerce_pref_value(key, str(args.value))
@@ -1202,6 +1257,15 @@ def _print_jobs_table(jobs: list[dict[str, object]]) -> None:
         print("No job history yet.")
         return
 
+    summary = job_scan_summary(jobs)
+    print(
+        "Jobs: "
+        f"{summary['total']} shown, "
+        f"{summary['succeeded']} succeeded, "
+        f"{summary['failed']} failed, "
+        f"{summary['retryable_failures']} retryable failure(s)"
+    )
+    print()
     print(f"{'STARTED':19}  {'STATUS':9} {'DURATION':9} {'EXIT':>4}  NAME")
     for job in jobs:
         status = str(job.get("status") or "-")[:9]
@@ -1386,6 +1450,8 @@ def _cmd_jobs(args: argparse.Namespace) -> int:
     jobs = recent_jobs(
         base_dir=_state_dir(),
         failed_only=bool(getattr(args, "failed", False)),
+        status=str(getattr(args, "status", "all") or "all"),
+        query=str(getattr(args, "query", "") or ""),
         limit=max(1, int(getattr(args, "limit", 20) or 20)),
         newest_first=True,
     )
@@ -1395,6 +1461,88 @@ def _cmd_jobs(args: argparse.Namespace) -> int:
 
     _print_jobs_table(jobs)
     return 0
+
+
+def _state_json(path: Path) -> object:
+    try:
+        return json.loads(path.read_text(encoding="utf-8"))
+    except FileNotFoundError:
+        return None
+    except (OSError, json.JSONDecodeError):
+        return None
+
+
+def _build_state_export(args: argparse.Namespace) -> dict[str, object]:
+    state_dir = _state_dir()
+    since_arg = str(getattr(args, "since", "") or "").strip()
+    cutoff = datetime.min.replace(tzinfo=timezone.utc)
+    apply_cutoff = bool(since_arg)
+    if since_arg:
+        cutoff = datetime.now(timezone.utc) - _parse_since_duration(since_arg)
+
+    jobs = [
+        job
+        for job in recent_jobs(base_dir=state_dir, limit=max(1, int(getattr(args, "limit", 100) or 100)), newest_first=True)
+        if not apply_cutoff or _within_since(job, cutoff)
+    ]
+    events = [
+        event
+        for event in reversed(load_events(state_dir))
+        if not apply_cutoff or _within_since(event, cutoff)
+    ]
+    pet_state = None if getattr(args, "no_pet", False) else _state_json(_pet_path())
+    prefs = load_prefs(state_dir)
+    return {
+        "schema": "hermes.pet.export.v1",
+        "exported_at": datetime.now(timezone.utc).isoformat(timespec="seconds").replace("+00:00", "Z"),
+        "state_dir": str(state_dir),
+        "prefs": prefs,
+        "pet": pet_state,
+        "jobs": jobs,
+        "events": events[: max(1, int(getattr(args, "event_limit", 100) or 100))],
+        "summary": {
+            "jobs": job_scan_summary(jobs),
+            "events": len(events),
+        },
+    }
+
+
+def _cmd_state_export(args: argparse.Namespace) -> int:
+    payload = _build_state_export(args)
+    text = json.dumps(payload, indent=2, sort_keys=True, ensure_ascii=False) + "\n"
+    output = str(getattr(args, "output", "") or "").strip()
+    if output:
+        path = Path(output).expanduser()
+        path.parent.mkdir(parents=True, exist_ok=True)
+        path.write_text(text, encoding="utf-8")
+        print(f"✅ Exported Hermes Pets state to {path}")
+        return 0
+    print(text, end="")
+    return 0
+
+
+def _cmd_state_cleanup(args: argparse.Namespace) -> int:
+    keep_jobs = max(0, int(getattr(args, "keep_jobs", HISTORY_LIMIT) or 0))
+    keep_events = max(0, int(getattr(args, "keep_events", 200) or 0))
+    dry_run = bool(getattr(args, "dry_run", False))
+    current_jobs = recent_jobs(base_dir=_state_dir(), limit=HISTORY_LIMIT, newest_first=False)
+    current_events = load_events(_state_dir())
+    if dry_run:
+        job_result = {"before": len(current_jobs), "after": min(len(current_jobs), keep_jobs), "removed": max(0, len(current_jobs) - keep_jobs)}
+        event_result = {"before": len(current_events), "after": min(len(current_events), keep_events), "removed": max(0, len(current_events) - keep_events)}
+    else:
+        job_result = compact_jobs(base_dir=_state_dir(), keep=keep_jobs)
+        event_result = compact_events(base_dir=_state_dir(), keep=keep_events)
+    mode = "Would remove" if dry_run else "Removed"
+    print(
+        f"{mode} {job_result['removed']} job(s) and {event_result['removed']} event(s). "
+        f"Kept {job_result['after']} job(s), {event_result['after']} event(s)."
+    )
+    return 0
+
+
+def _cmd_state(_: argparse.Namespace) -> int:
+    raise PetCLIError("Use 'hermes-pet state export' or 'hermes-pet state cleanup'.")
 
 
 def _cmd_retry(args: argparse.Namespace) -> int:
@@ -1794,6 +1942,16 @@ def _build_parser() -> argparse.ArgumentParser:
     mute.add_argument("duration", help="Duration such as 30m, 2h, or 45s. Bare numbers mean minutes.")
     mute.set_defaults(func=_cmd_mute)
 
+    profile = subparsers.add_parser("profile", help="Use a named notification profile.")
+    profile.add_argument(
+        "profile",
+        nargs="?",
+        choices=sorted(NOTIFICATION_PROFILES),
+        help="Profile to use: normal, focus, pairing, demo, or silent.",
+    )
+    profile.add_argument("--list", action="store_true", help="List available notification profiles.")
+    profile.set_defaults(func=_cmd_profile)
+
     prefs = subparsers.add_parser("prefs", help="Show or update notification preferences.")
     prefs_sub = prefs.add_subparsers(dest="prefs_action")
     prefs_set = prefs_sub.add_parser("set", help="Set one notification preference.")
@@ -1801,6 +1959,7 @@ def _build_parser() -> argparse.ArgumentParser:
         "key",
         choices=[
             "muted_until",
+            "notification_profile",
             "quiet_mode",
             "bubble_throttle_seconds",
             "show_tray_on_urgent",
@@ -1809,14 +1968,41 @@ def _build_parser() -> argparse.ArgumentParser:
         help="Preference key to update.",
     )
     prefs_set.add_argument("value", help="New preference value.")
+    prefs_profile = prefs_sub.add_parser("profile", help="Use a named notification profile.")
+    prefs_profile.add_argument("profile", nargs="?", choices=sorted(NOTIFICATION_PROFILES), help="Profile to apply.")
+    prefs_profile.add_argument("--list", action="store_true", help="List available notification profiles.")
     prefs.set_defaults(func=_cmd_prefs)
     prefs_set.set_defaults(func=_cmd_prefs, prefs_action="set")
+    prefs_profile.set_defaults(func=_cmd_prefs, prefs_action="profile")
 
     jobs = subparsers.add_parser("jobs", help="Show recent wrapped job history.")
     jobs.add_argument("--failed", action="store_true", help="Show only failed jobs.")
+    jobs.add_argument(
+        "--status",
+        choices=["all", "succeeded", "failed"],
+        default="all",
+        help="Filter by job status.",
+    )
+    jobs.add_argument("--query", default="", help="Filter jobs by name, command, output, or error text.")
     jobs.add_argument("--last", action="store_true", help="Show detailed output for the latest matching job.")
     jobs.add_argument("--limit", type=int, default=20, help="Number of jobs to show.")
     jobs.set_defaults(func=_cmd_jobs)
+
+    state = subparsers.add_parser("state", help="Export or compact local Hermes Pets state.")
+    state_sub = state.add_subparsers(dest="state_action")
+    state_export = state_sub.add_parser("export", help="Export compact local state as redacted JSON.")
+    state_export.add_argument("--output", "-o", default="", help="Optional output JSON path. Defaults to stdout.")
+    state_export.add_argument("--since", default="", help="Only include jobs/events in a recent window such as 24h or 7d.")
+    state_export.add_argument("--limit", type=int, default=100, help="Maximum jobs to include.")
+    state_export.add_argument("--event-limit", type=int, default=100, help="Maximum events to include.")
+    state_export.add_argument("--no-pet", action="store_true", help="Omit pet.json from the export.")
+    state_export.set_defaults(func=_cmd_state_export)
+    state_cleanup = state_sub.add_parser("cleanup", help="Compact bounded local jobs and event history.")
+    state_cleanup.add_argument("--keep-jobs", type=int, default=HISTORY_LIMIT, help="Number of recent jobs to keep.")
+    state_cleanup.add_argument("--keep-events", type=int, default=200, help="Number of recent events to keep.")
+    state_cleanup.add_argument("--dry-run", action="store_true", help="Print cleanup counts without writing.")
+    state_cleanup.set_defaults(func=_cmd_state_cleanup)
+    state.set_defaults(func=_cmd_state)
 
     retry = subparsers.add_parser("retry", help="Rerun the latest failed wrapped command.")
     retry.add_argument(

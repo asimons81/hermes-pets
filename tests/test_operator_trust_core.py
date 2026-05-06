@@ -13,7 +13,8 @@ from hermes_pet.custom_pets import (
     set_current_custom_pet,
     validate_pet_name,
 )
-from hermes_pet.jobs import save_jobs
+from hermes_pet.jobs import load_jobs, save_jobs
+from hermes_pet.prefs import save_prefs
 
 
 PNG_BYTES = b"\x89PNG\r\n\x1a\nminimal"
@@ -131,3 +132,45 @@ def test_doctor_strict_fails_when_checks_warn(monkeypatch, tmp_path) -> None:
 
     assert cli._cmd_doctor(argparse.Namespace(strict=False)) == 0
     assert cli._cmd_doctor(argparse.Namespace(strict=True)) == 1
+
+
+def test_state_export_includes_redacted_local_activity(monkeypatch, tmp_path) -> None:
+    monkeypatch.setattr(cli, "_state_dir", lambda: tmp_path)
+    save_prefs({"quiet_mode": "important"}, tmp_path)
+    save_jobs(
+        [
+            {
+                "id": "job-1",
+                "name": "deploy",
+                "status": "failed",
+                "exit_code": 1,
+                "command": ["deploy", "--token", "[redacted]"],
+                "command_redacted": True,
+                "retryable": False,
+            }
+        ],
+        tmp_path,
+    )
+    event_log.append_event(
+        {"type": "message_received", "text": "token=secret", "sender": "Ada", "created_at": "2026-05-06T12:00:00Z"},
+        base_dir=tmp_path,
+    )
+
+    payload = cli._build_state_export(argparse.Namespace(since="", limit=10, event_limit=10, no_pet=True))
+
+    assert payload["schema"] == "hermes.pet.export.v1"
+    assert payload["prefs"]["notification_profile"] == "focus"
+    assert payload["jobs"][0]["command"] == ["deploy", "--token", "[redacted]"]
+    assert payload["summary"]["jobs"]["failed"] == 1
+    assert payload["events"][0]["text"] == "token=[redacted]"
+
+
+def test_state_cleanup_dry_run_preserves_history(monkeypatch, tmp_path, capsys) -> None:
+    monkeypatch.setattr(cli, "_state_dir", lambda: tmp_path)
+    save_jobs([{"id": "old"}, {"id": "new"}], tmp_path)
+    event_log.append_event({"type": "status", "text": "one"}, base_dir=tmp_path)
+
+    assert cli._cmd_state_cleanup(argparse.Namespace(keep_jobs=1, keep_events=0, dry_run=True)) == 0
+
+    assert "Would remove 1 job(s) and 1 event(s)" in capsys.readouterr().out
+    assert len(load_jobs(tmp_path)) == 2
