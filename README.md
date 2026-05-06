@@ -18,6 +18,15 @@ The repo combines a Python CLI, a WebSocket bridge, local state under `~/.hermes
 
 Pet state and local history live under `~/.hermes_pet` by default. Set `HERMES_PET_HOME` when you intentionally want an isolated state directory.
 
+## In action
+
+These screenshots are local demo captures. The text is generic, and there is no sensitive data in them.
+
+| Launch bubble | Review tray | README banner |
+| --- | --- | --- |
+| <img src="docs/assets/hermes-pet-launch-bubble.png" alt="Hermes Pets launch bubble" width="340"> | <img src="docs/assets/hermes-pet-review-tray.png" alt="Hermes Pets review tray" width="340"> | <img src="docs/assets/hermes-pet-banner-updated.png" alt="Hermes Pets README banner" width="340"> |
+| The pet reacts to `hermes-pet launch` with a visible bubble and status card. | Job history and approval-needed state, with the event tray open. | The updated banner asset from the PR, preserved as a separate preview. |
+
 ## Quickstart
 
 Install from the repo, then launch the bridge and overlay:
