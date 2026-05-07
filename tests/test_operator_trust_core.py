@@ -2,6 +2,8 @@ from __future__ import annotations
 
 import argparse
 import json
+import sys
+from datetime import timedelta
 
 import pytest
 
@@ -59,6 +61,42 @@ def test_event_log_redacts_text_and_drops_unsafe_keys(tmp_path) -> None:
             "urgent": True,
         }
     ]
+
+
+def test_event_log_persists_clean_phase4_context_only(tmp_path) -> None:
+    event_log.append_event(
+        {
+            "schema": "hermes.pet.event.v1",
+            "type": "approval_needed",
+            "text": "Review token=secret",
+            "source": "github",
+            "source_id": "issue-16",
+            "urgency": "urgent",
+            "project_id": "hermes-pet",
+            "project_path": "/home/tony/projects/hermes-pet",
+            "session_id": "session-1",
+            "session_label": "Phase 4",
+            "action_label": "Open issue",
+            "action_command": "gh issue view 16 --token secret",
+            "action_url": "https://github.com/asimons81/hermes-pets/issues/16",
+            "privacy_summary": "Body redacted; token=secret",
+            "metadata": {"token": "secret"},
+        },
+        base_dir=tmp_path,
+    )
+
+    stored = json.loads(event_log.events_path(tmp_path).read_text(encoding="utf-8"))[0]
+
+    assert stored["schema"] == "hermes.pet.event.v1"
+    assert stored["urgency"] == "urgent"
+    assert stored["source"] == "github"
+    assert stored["source_id"] == "issue-16"
+    assert stored["project_id"] == "hermes-pet"
+    assert stored["session_id"] == "session-1"
+    assert stored["action_label"] == "Open issue"
+    assert stored["action_command"] == "gh issue view 16 --token [redacted]"
+    assert stored["privacy_summary"] == "Body redacted; token=[redacted]"
+    assert "metadata" not in stored
 
 
 def test_retry_refuses_redacted_failed_job(tmp_path, monkeypatch) -> None:
@@ -190,6 +228,267 @@ def test_state_export_includes_redacted_local_activity(monkeypatch, tmp_path) ->
     assert payload["jobs"][0]["command"] == ["deploy", "--token", "[redacted]"]
     assert payload["summary"]["jobs"]["failed"] == 1
     assert payload["events"][0]["text"] == "token=[redacted]"
+
+
+def test_state_export_cleans_raw_phase4_event_metadata(monkeypatch, tmp_path) -> None:
+    monkeypatch.setattr(cli, "_state_dir", lambda: tmp_path)
+    event_log.events_path(tmp_path).write_text(
+        json.dumps(
+            [
+                {
+                    "schema": "hermes.pet.event.v1",
+                    "type": "approval_needed",
+                    "text": "Review token=secret",
+                    "source": "github token=secret",
+                    "source_id": "issue-18",
+                    "project_path": "/tmp/token=secret/repo",
+                    "session_label": "Phase token=secret",
+                    "action_label": "Open token=secret",
+                    "action_command": "deploy --token secret",
+                    "action_url": "https://example.test/hook?token=secret",
+                    "privacy_summary": "Local path token=secret was removed.",
+                    "raw_metadata": {"token": "secret"},
+                }
+            ]
+        ),
+        encoding="utf-8",
+    )
+
+    payload = cli._build_state_export(argparse.Namespace(since="", limit=10, event_limit=10, no_pet=True))
+    event = payload["events"][0]
+
+    assert event["text"] == "Review token=[redacted]"
+    assert event["source"] == "github token=[redacted]"
+    assert event["project_path"].startswith("/tmp/token=[redacted]")
+    assert event["session_label"] == "Phase token=[redacted]"
+    assert event["action_label"] == "Open token=[redacted]"
+    assert event["action_command"] == "deploy --token [redacted]"
+    assert event["action_url"] == "https://example.test/hook?token=[redacted]"
+    assert event["privacy_summary"] == "Local path token=[redacted] was removed."
+    assert "raw_metadata" not in event
+    assert "secret" not in json.dumps(event)
+
+
+def test_raw_event_file_drops_unsafe_action_url(tmp_path) -> None:
+    event_log.events_path(tmp_path).write_text(
+        json.dumps(
+            [
+                {
+                    "schema": "hermes.pet.event.v1",
+                    "type": "approval_needed",
+                    "text": "Review",
+                    "action_url": "javascript:alert(1)",
+                },
+                {
+                    "schema": "hermes.pet.event.v1",
+                    "type": "approval_needed",
+                    "text": "Review safe URL",
+                    "action_url": "https://example.test/review?token=secret",
+                },
+            ]
+        ),
+        encoding="utf-8",
+    )
+
+    events = event_log.load_events(tmp_path)
+
+    assert "action_url" not in events[0]
+    assert events[1]["action_url"] == "https://example.test/review?token=[redacted]"
+
+
+def test_event_context_prefers_cli_over_env(monkeypatch) -> None:
+    monkeypatch.setenv("HERMES_PET_PROJECT_ID", "env-project")
+    monkeypatch.setenv("HERMES_PET_PROJECT_PATH", "/env/project")
+    monkeypatch.setenv("HERMES_PET_SESSION_ID", "env-session")
+    monkeypatch.setenv("HERMES_PET_SESSION_LABEL", "Env Session")
+
+    context = cli._event_context_from_args(
+        argparse.Namespace(
+            project_id="cli-project",
+            project_path="",
+            session_id="",
+            session_label="CLI Session",
+        )
+    )
+
+    assert context == {
+        "project_id": "cli-project",
+        "project_path": "/env/project",
+        "session_id": "env-session",
+        "session_label": "CLI Session",
+    }
+
+
+def test_event_context_flags_are_shared_across_emitters() -> None:
+    parser = cli._build_parser()
+    commands = [
+        ["emit", "status", "hello", "--project-id", "hermes-pet"],
+        ["message", "--source", "telegram", "--sender", "Ada", "--project-id", "hermes-pet", "hello"],
+        ["brief", "--emit", "--project-id", "hermes-pet"],
+        ["run", "--project-id", "hermes-pet", "--", sys.executable, "-c", "pass"],
+        ["wrap", "--name", "smoke", "--project-id", "hermes-pet", "--", sys.executable, "-c", "pass"],
+    ]
+
+    for argv in commands:
+        args = parser.parse_args(argv)
+        assert args.project_id == "hermes-pet"
+
+
+def test_event_context_infers_git_project_for_wrapped_commands(monkeypatch, tmp_path) -> None:
+    for key in (
+        "HERMES_PET_PROJECT_ID",
+        "HERMES_PET_PROJECT_PATH",
+        "HERMES_PET_SESSION_ID",
+        "HERMES_PET_SESSION_LABEL",
+    ):
+        monkeypatch.delenv(key, raising=False)
+
+    repo = tmp_path / "demo-repo"
+    repo.mkdir()
+
+    class Result:
+        returncode = 0
+        stdout = f"{repo}\n"
+
+    monkeypatch.setattr(cli.subprocess, "run", lambda *args, **kwargs: Result())
+
+    context = cli._event_context_from_args(
+        argparse.Namespace(project_id="", project_path="", session_id="", session_label=""),
+        infer_project=True,
+    )
+
+    assert context == {
+        "project_id": "demo-repo",
+        "project_path": str(repo),
+    }
+
+
+def test_message_context_and_open_command_reach_event(monkeypatch) -> None:
+    captured = {}
+
+    def fake_send(event_type, text, *, required, **extra):
+        captured.update({"event_type": event_type, "text": text, "required": required, "extra": extra})
+        return True, {"type": event_type, "text": text, "source": extra["source"], "sender": extra["sender"]}
+
+    monkeypatch.setattr(cli, "_send_pet_event", fake_send)
+
+    assert cli._cmd_message(
+        argparse.Namespace(
+            source="telegram",
+            sender="Ada",
+            text=["Can", "you", "review?"],
+            urgent=False,
+            open_command="gh issue view 19",
+            project_id="hermes-pet",
+            project_path="",
+            session_id="session-1",
+            session_label="",
+        )
+    ) == 0
+
+    assert captured["event_type"] == "message_received"
+    assert captured["extra"]["action_command"] == "gh issue view 19"
+    assert captured["extra"]["project_id"] == "hermes-pet"
+    assert captured["extra"]["session_id"] == "session-1"
+
+
+def test_send_pet_event_broadcasts_privacy_safe_payload(monkeypatch, tmp_path) -> None:
+    sent = {}
+
+    class Bridge:
+        @staticmethod
+        def send_event_to_bridge(event, *, port, host, bridge_url):
+            sent.update(event)
+            return True
+
+    monkeypatch.setattr(cli, "_state_dir", lambda: tmp_path)
+    monkeypatch.setattr(cli.importlib, "import_module", lambda name: Bridge)
+
+    ok, event = cli._send_pet_event(
+        "message_received",
+        "Review token=secret",
+        required=True,
+        source="telegram",
+        sender="Ada",
+        action_command="deploy --token secret",
+        action_url="https://example.test/review?token=secret",
+        privacy_summary="Contains token=secret",
+    )
+
+    stored = json.loads(event_log.events_path(tmp_path).read_text(encoding="utf-8"))[0]
+
+    assert ok is True
+    assert event == sent == stored
+    assert sent["text"] == "Review token=[redacted]"
+    assert sent["action_command"] == "deploy --token [redacted]"
+    assert sent["action_url"] == "https://example.test/review?token=[redacted]"
+    assert sent["privacy_summary"] == "Contains token=[redacted]"
+    assert "secret" not in json.dumps(sent)
+
+
+def test_wrapped_command_events_include_context(monkeypatch) -> None:
+    emitted = []
+
+    def fake_send(event_type, text, *, required, **extra):
+        emitted.append({"type": event_type, "text": text, "extra": extra})
+        return True, {"type": event_type, "text": text, **extra}
+
+    monkeypatch.setattr(cli, "_send_pet_event", fake_send)
+    monkeypatch.setattr(cli, "_record_job", lambda **kwargs: None)
+
+    result = cli._run_wrapped_command_with_context(
+        [sys.executable, "-c", "pass"],
+        name="context smoke",
+        status_interval=0,
+        event_context={"project_id": "hermes-pet", "session_id": "session-1"},
+    )
+
+    assert result == 0
+    assert [event["type"] for event in emitted] == ["job_started", "job_finished"]
+    assert all(event["extra"]["project_id"] == "hermes-pet" for event in emitted)
+    assert all(event["extra"]["session_id"] == "session-1" for event in emitted)
+
+
+def test_brief_prioritizes_urgent_grouped_actionable_events(monkeypatch, tmp_path) -> None:
+    monkeypatch.setattr(cli, "_state_dir", lambda: tmp_path)
+    event_log.append_event(
+        cli.build_event(
+            "message_received",
+            "Can you review?",
+            source="telegram",
+            sender="Ada",
+            project_id="hermes-pet",
+            session_label="Phase 4",
+            action_command="gh issue view 17",
+        ),
+        base_dir=tmp_path,
+    )
+    event_log.append_event(
+        cli.build_event(
+            "approval_needed",
+            "Deploy plan needs review",
+            urgency="urgent",
+            project_id="hermes-pet",
+            session_label="Phase 4",
+            action_label="Review plan",
+            action_url="https://example.test/plan",
+        ),
+        base_dir=tmp_path,
+    )
+
+    brief = cli._build_brief(since=timedelta(days=1))
+    telegram = cli._build_brief(since=timedelta(days=1), telegram_text=True)
+
+    assert "By project/session:" in brief
+    assert "hermes-pet / Phase 4: 2 event(s)" in brief
+    assert "Top local events:" in brief
+    assert "Hint: Review plan" in brief
+    assert "Suggested next action: Handle urgent local event" in brief
+    top_line = next(line for line in brief.splitlines() if line.startswith("Top local events:"))
+    assert top_line.index("Deploy plan needs review") < top_line.index("telegram from Ada")
+    assert "Urgent: 1" in telegram
+    assert "Group: hermes-pet / Phase 4" in telegram
+    assert "gh issue view 17" in telegram
 
 
 def test_state_cleanup_dry_run_preserves_history(monkeypatch, tmp_path, capsys) -> None:

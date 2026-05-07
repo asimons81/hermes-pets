@@ -17,6 +17,7 @@ node --check overlay/src/renderer.js
 node --check overlay/src/main.js
 node --check overlay/src/main.windows.js
 node --check overlay/src/preload.js
+node scripts/smoke-renderer.js
 bash -n shell-helpers/hermes-pet.bash scripts/smoke-hermes-pet.sh scripts/smoke-github-install.sh
 python3 scripts/validate-sprite-manifest.py
 scripts/verify-packaged-overlay.sh
@@ -52,6 +53,36 @@ Before release, run the live overlay checklist from `OPERATOR_GUIDE.md` with the
 real Electron window visible. Capture evidence for launch/replace, visible
 sprite animation, tray grouping, attention borders, reconnect, quiet/profile
 behavior, and custom pet fallback or preview.
+
+## Phase 4 Closeout
+
+For Hermes-aware integration work, keep the phase schema-first:
+
+- Confirm event schema remains `hermes.pet.event.v1`.
+- Confirm no live Hermes Agent, Nexus, Telegram, GitHub, calendar, or other
+  adapter was added.
+- Confirm project/session metadata comes from CLI flags, environment defaults,
+  or safe git inference for `run` and `wrap`.
+- Confirm action hints are stored and displayed only, never executed.
+- Confirm `urgency` accepts only `normal`, `important`, and `urgent`.
+- Confirm event history and state export keep only approved, redacted Phase 4
+  metadata fields.
+- Confirm briefs prioritize urgent/actionable local events and only group by
+  project/session when useful.
+
+Run the Phase 4 readiness stack before pushing:
+
+```bash
+pytest
+node scripts/smoke-renderer.js
+scripts/verify-packaged-overlay.sh
+scripts/smoke-hermes-pet.sh --temp-state
+scripts/verify-live-overlay.sh
+```
+
+Run `scripts/verify-live-overlay.sh` when the local machine can launch the real
+overlay. If it is not available in a given environment, record that explicitly
+with the rest of the verification output.
 
 ## Installability
 
