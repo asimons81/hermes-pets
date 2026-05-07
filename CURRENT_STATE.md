@@ -24,7 +24,7 @@ Snapshot date: 2026-05-07
 - The bridge sends selected custom pet metadata to the overlay, and the renderer can load custom package frames from the local custom pet path.
 - Custom pet docs include temporary-state preview and minimal-template workflows.
 - Community custom pet contribution docs and issue/PR checklists define curated submissions, validation evidence, preview evidence, and licensing expectations without a hosted gallery.
-- Phase 5 release closeout docs define the 0.1.1 versus 0.2.0 decision mechanics without bumping the current package version.
+- Phase 5 release closeout docs define the 0.1.1 versus 0.2.0 decision mechanics; the explicit release task bumped the package version to 0.2.0.
 - Phase 5 readiness passed on WSL/Windows on 2026-05-07: pytest, renderer smoke,
   package artifact verification, packaged overlay verification, temp-state CLI
   smoke, live overlay verification, and fresh install smoke against the current
@@ -132,9 +132,8 @@ hpbrief
 
 ## Next Recommended Improvements
 
-- Prepare the next release as `0.2.0` if the release task chooses to publish the
-  Phase 5 readiness story; keep the actual version bump, tag, and any PyPI
-  upload out of implementation work until that release task begins.
+- Use the `v0.2.0` release as the baseline for the next platform and packaging
+  milestone; keep any PyPI upload or installer work as an explicit future task.
 - Expand automated CLI tests around parser behavior, wrapped command execution, and brief formatting.
 - Add deeper live overlay checks for drag ergonomics, always-on-top behavior, and multi-monitor/DPI setups.
 - Add richer custom pet preview controls such as playback speed and side-by-side state comparison.

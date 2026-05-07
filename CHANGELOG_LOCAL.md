@@ -10,6 +10,15 @@ This file records local implementation milestones and release-candidate notes al
 
 ## Implemented Milestones
 
+## v0.2.0 - 2026-05-07
+
+- Released Phase 5 as the public readiness baseline for WSL2/Windows full-overlay support.
+- Kept GitHub install as the supported public install path.
+- Added package artifact checks for wheel and sdist contents.
+- Added PyPI and installer decision notes without publishing to PyPI.
+- Added curated community custom pet contribution workflow.
+- Bumped package metadata from `0.1.0` to `0.2.0`.
+
 ### Phase 5 Release Readiness
 
 - Added a platform support matrix that names WSL2/Windows as the supported

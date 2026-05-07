@@ -14,9 +14,8 @@ Use semantic versioning for the next release decision:
   install rehearsal, package artifact checks, contribution workflow, and closeout
   evidence are strong enough to describe a broader readiness milestone.
 
-Do not change `project.version` in `pyproject.toml` during Phase 5 by default.
-Record the recommendation here and in `CURRENT_STATE.md`; perform the actual
-version bump only in the release task.
+The Phase 5 implementation kept `project.version` unchanged by default. The
+explicit release task on 2026-05-07 bumped `project.version` to `0.2.0`.
 
 ## Phase 5 Acceptance Evidence
 
@@ -77,10 +76,9 @@ Notes:
 - The install smoke used the current workspace as `HERMES_PET_INSTALL_TARGET`
   because the Phase 5 branch had not been pushed yet.
 
-## Recommendation
+## Release Decision
 
-Recommend `0.2.0` for the next release, with the actual version bump deferred to
-the release task.
+Released as `0.2.0` after the explicit release task on 2026-05-07.
 
 The evidence supports a minor release rather than `0.1.1` because Phase 5 now
 defines the public support boundary, proves WSL/Windows live overlay behavior,
