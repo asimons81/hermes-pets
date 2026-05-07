@@ -1,6 +1,6 @@
 # Hermes Pets Current State
 
-Snapshot date: 2026-05-06
+Snapshot date: 2026-05-07
 
 ## What Works
 
@@ -23,11 +23,18 @@ Snapshot date: 2026-05-06
 - Animated custom pets can be validated, imported into `~/.hermes_pet/custom-pets`, selected, listed, and removed with `hermes-pet custom-pet ...`.
 - The bridge sends selected custom pet metadata to the overlay, and the renderer can load custom package frames from the local custom pet path.
 - Custom pet docs include temporary-state preview and minimal-template workflows.
+- Community custom pet contribution docs and issue/PR checklists define curated submissions, validation evidence, preview evidence, and licensing expectations without a hosted gallery.
+- Phase 5 release closeout docs define the 0.1.1 versus 0.2.0 decision mechanics without bumping the current package version.
+- Phase 5 readiness passed on WSL/Windows on 2026-05-07: pytest, renderer smoke,
+  package artifact verification, packaged overlay verification, temp-state CLI
+  smoke, live overlay verification, and fresh install smoke against the current
+  workspace target.
 - A repo-local Codex skill exists at `.codex/skills/hermes-pet-hatch/SKILL.md` for creating Hermes-compatible custom pet packages.
 - `hermes-pet doctor` checks CLI, bridge, overlay, state, prefs, and job history.
 - `hermes-pet doctor --strict` returns non-zero when any doctor check warns.
 - Bash helpers and a smoke script are available for daily operation.
 - A temp-state smoke mode and a fresh GitHub install smoke script are available for release confidence.
+- WSL2/Windows with Windows interop is the supported full-overlay platform; native Linux, macOS, and native Windows are documented as investigation targets only.
 
 ## Key Commands
 
@@ -106,10 +113,13 @@ hpbrief
 - `scripts/package-custom-pet.py`: custom pet package helper for hatch runs and built-in fixtures.
 - `.codex/skills/hermes-pet-hatch/SKILL.md`: Hermes-specific custom pet creation workflow.
 - `CUSTOM_PETS.md`: custom pet package format and CLI docs.
+- `docs/custom-pet-contributions.md`: community custom pet submission, validation, preview, licensing, and curation workflow.
+- `docs/release-closeout.md`: Phase 5 verification evidence and next-version recommendation mechanics.
+- `docs/platform-support.md`: supported platform matrix, CLI-only boundaries, and known platform blockers.
 
 ## Known Limitations
 
-- The overlay is primarily tuned for WSL launching a Windows Electron window.
+- The full overlay path is supported on WSL2/Windows with Windows interop. Native Linux, macOS, and native Windows are not supported full-overlay platforms in Phase 5.
 - Editable installs use the repo-local `overlay/`; non-editable installs use packaged overlay assets cached under `~/.hermes_pet/cache/overlay`.
 - The bridge must be reachable for live overlay events; local event/job history still records when the bridge is unavailable.
 - Custom pet `idle` is required; missing optional states rely on renderer fallback behavior.
@@ -122,6 +132,9 @@ hpbrief
 
 ## Next Recommended Improvements
 
+- Prepare the next release as `0.2.0` if the release task chooses to publish the
+  Phase 5 readiness story; keep the actual version bump, tag, and any PyPI
+  upload out of implementation work until that release task begins.
 - Expand automated CLI tests around parser behavior, wrapped command execution, and brief formatting.
 - Add deeper live overlay checks for drag ergonomics, always-on-top behavior, and multi-monitor/DPI setups.
 - Add richer custom pet preview controls such as playback speed and side-by-side state comparison.

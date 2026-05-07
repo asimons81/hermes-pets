@@ -5,15 +5,19 @@ Date: 2026-05-05
 This rehearsal verifies a non-editable install from a fresh environment outside
 the repository. It does not push, tag, publish, or add remotes.
 
-## Public Install Path
+## Supported Install Path
 
-For a published release, the public install command is:
+For Phase 5, GitHub install remains the supported public install path:
 
 ```bash
 python3 -m venv /tmp/hermes-pet-release-rehearsal-venv
-/tmp/hermes-pet-release-rehearsal-venv/bin/python -m pip install hermes-pet
+/tmp/hermes-pet-release-rehearsal-venv/bin/python -m pip install \
+  'git+https://github.com/asimons81/hermes-pets.git'
 /tmp/hermes-pet-release-rehearsal-venv/bin/hermes-pet --help
 ```
+
+PyPI packaging can be rehearsed and improved, but Phase 5 does not publish to
+PyPI or treat `pip install hermes-pet` as the supported install path.
 
 For this local release-candidate rehearsal, the package was installed
 non-editably from the repository path:
@@ -70,6 +74,15 @@ HERMES_PET_HOME=/tmp/hermes-pet-release-rehearsal-20260505-1745-state HERMES_PET
 env PATH=/tmp/hermes-pet-release-rehearsal-20260505-1745-venv/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin:/mnt/c/Windows/System32/WindowsPowerShell/v1.0:/mnt/c/Windows/system32 HERMES_PET_HOME=/tmp/hermes-pet-release-rehearsal-20260505-1745-state HERMES_PET_FORCE_PACKAGED_OVERLAY=1 HERMES_PET_PORT=18473 /tmp/hermes-pet-release-rehearsal-20260505-1745-venv/bin/hermes-pet close --bridge
 env PATH=/tmp/hermes-pet-release-rehearsal-20260505-1745-venv/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin:/mnt/c/Windows/System32/WindowsPowerShell/v1.0:/mnt/c/Windows/system32 HERMES_PET_HOME=/tmp/hermes-pet-release-rehearsal-20260505-1745-state HERMES_PET_FORCE_PACKAGED_OVERLAY=1 HERMES_PET_PORT=18473 /tmp/hermes-pet-release-rehearsal-20260505-1745-venv/bin/hermes-pet overlay-status
 ```
+
+For repeatable Phase 5 GitHub install rehearsal, use:
+
+```bash
+scripts/smoke-github-install.sh
+```
+
+Set `HERMES_PET_INSTALL_TARGET` for a branch, tag, fork, or local path while
+keeping the same smoke workflow.
 
 ## Passed
 

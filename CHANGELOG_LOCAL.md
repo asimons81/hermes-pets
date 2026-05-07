@@ -10,6 +10,20 @@ This file records local implementation milestones and release-candidate notes al
 
 ## Implemented Milestones
 
+### Phase 5 Release Readiness
+
+- Added a platform support matrix that names WSL2/Windows as the supported
+  full-overlay platform and keeps native Linux, macOS, and native Windows as
+  investigation or unsupported targets.
+- Added wheel/sdist artifact verification and documented GitHub install as the
+  supported public install path for Phase 5.
+- Added PyPI and installer decision notes, with metadata improvements but no
+  PyPI publish.
+- Added community custom pet contribution docs and issue/PR checklists for
+  validation, preview evidence, licensing, and curated review.
+- Added Phase 5 closeout notes recommending `0.2.0` for the next release after
+  the 2026-05-07 readiness stack passed.
+
 ### Movement Fix
 
 - Overlay positioning and drag handling were corrected so the pet window can be moved and its position can be saved.

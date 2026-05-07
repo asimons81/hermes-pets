@@ -30,6 +30,15 @@
 ## Screenshots/GIFs
 
 
+## Custom pet package
+
+- [ ] This PR adds or changes a custom pet package.
+- [ ] `custom-pet.json` is included.
+- [ ] `sprites/idle/*.png` is included.
+- [ ] I included preview evidence or a contact sheet.
+- [ ] I documented asset license and attribution.
+- [ ] I ran `hermes-pet custom-pet validate <path>`.
+
 ## Checklist
 
 - [ ] I ran relevant smoke tests.

@@ -20,6 +20,7 @@ node --check overlay/src/preload.js
 node scripts/smoke-renderer.js
 bash -n shell-helpers/hermes-pet.bash scripts/smoke-hermes-pet.sh scripts/smoke-github-install.sh
 python3 scripts/validate-sprite-manifest.py
+python3 scripts/verify-package-artifacts.py
 scripts/verify-packaged-overlay.sh
 scripts/smoke-hermes-pet.sh --temp-state
 hermes-pet doctor
@@ -84,13 +85,47 @@ Run `scripts/verify-live-overlay.sh` when the local machine can launch the real
 overlay. If it is not available in a given environment, record that explicitly
 with the rest of the verification output.
 
+## Phase 5 Closeout
+
+- Confirm `docs/platform-support.md` is current and does not overclaim native
+  Linux, macOS, or native Windows support.
+- Confirm `docs/packaging-decision-notes.md` keeps GitHub install primary and
+  PyPI unpublished unless the release task explicitly changes that.
+- Confirm `docs/custom-pet-contributions.md` describes curated repository
+  contributions only, with no hosted gallery or upload flow.
+- Run the Phase 5 readiness stack before pushing:
+
+```bash
+pytest
+node scripts/smoke-renderer.js
+scripts/verify-packaged-overlay.sh
+scripts/smoke-hermes-pet.sh --temp-state
+scripts/verify-live-overlay.sh
+```
+
+- Update `docs/release-closeout.md` and `CURRENT_STATE.md` with the evidence and
+  the next-version recommendation.
+- Do not bump `pyproject.toml` during Phase 5 by default.
+
 ## Installability
 
 - Confirm `pyproject.toml` exposes `hermes-pet` and `hermes-pet-bridge`.
+- Confirm PyPI-facing metadata in `pyproject.toml` still matches the current
+  supported platform claims and does not imply native Linux/macOS overlay
+  support.
 - Confirm Python dependencies match the import surface.
 - Confirm overlay dependencies in `overlay/package.json` still match the Windows launcher cache install.
+- Confirm `python3 scripts/verify-package-artifacts.py` builds and inspects both
+  wheel and sdist contents, including Python modules, console-script metadata,
+  overlay renderer files, Windows launcher script, manifest, and sprite PNGs.
 - Confirm `scripts/verify-packaged-overlay.sh` passes and reports a cached packaged overlay path.
+- Confirm `scripts/smoke-github-install.sh` passes for the public GitHub install
+  path, or set `HERMES_PET_INSTALL_TARGET` to the exact branch/tag/fork being
+  rehearsed.
 - Editable installs should still resolve the repo-local `overlay/`; non-editable installs should resolve packaged overlay assets copied under `~/.hermes_pet/cache/overlay`.
+- Confirm `docs/packaging-decision-notes.md` still names GitHub install as the
+  supported path and records PyPI/installer work as a future milestone unless
+  the release task explicitly changes that.
 
 ## Safety
 

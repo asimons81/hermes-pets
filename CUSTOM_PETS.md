@@ -8,6 +8,10 @@ ${HERMES_PET_HOME:-~/.hermes_pet}/custom-pets/<pet-name>/
 
 This keeps user-generated pets separate from tracked built-in assets.
 
+Community contribution rules live in `docs/custom-pet-contributions.md`. Phase 5
+supports curated issue/PR submissions only; it does not add a hosted gallery or
+remote upload flow.
+
 ## Package Format
 
 A custom pet package can be a finalized `hatch-pet` run, or a Hermes package with:
@@ -162,3 +166,6 @@ generated pet run to the repository.
 
 - Use `hermes-pet custom-pet preview` for an HTML animation check, then import into a temporary `HERMES_PET_HOME` and launch the overlay for a live check when desktop behavior matters.
 - Custom pet selection is local state under `~/.hermes_pet` and does not add the package to the built-in species manifest.
+- Community custom pet submissions are reviewed as ordinary repository
+  contributions. There is no hosted gallery, in-app downloader, or remote upload
+  path in Phase 5.

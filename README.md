@@ -46,6 +46,20 @@ hermes-pet doctor
 
 On WSL/Windows, run the CLI from WSL. `hermes-pet launch` starts the Python bridge in WSL and opens the Electron overlay through the Windows PowerShell launcher.
 
+## Platform Support
+
+WSL2 on Windows 10/11 with Windows interop is the supported platform for the
+full CLI, bridge, and floating Electron overlay experience. Native Linux,
+macOS, and native Windows are investigation targets only in Phase 5; do not treat
+CLI-only behavior on those platforms as full overlay support.
+
+See `docs/platform-support.md` for the supported platform matrix, CLI-only
+boundaries, and known blockers.
+
+Packaging and installer tradeoffs are tracked in
+`docs/packaging-decision-notes.md`. Phase 5 improves package readiness but does
+not publish to PyPI.
+
 ## Install and CLI
 
 For editable local development:

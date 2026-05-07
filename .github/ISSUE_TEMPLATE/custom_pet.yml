@@ -16,31 +16,56 @@ body:
     id: description
     attributes:
       label: Description
-      description: Describe the pet's look, personality, and intended feel.
+      description: Describe the pet's look, intended feel, and whether this is a proposal or a ready package.
     validations:
       required: true
   - type: textarea
     id: animations
     attributes:
       label: Included states/animations
-      description: List the included states, such as idle, working, success, failure, alert, or sleeping.
+      description: List included state folders. idle is required; optional examples include run_right, run_left, waving, jumping, failed, waiting, running, review, message_react, bubble_react, and blink.
+    validations:
+      required: true
+  - type: textarea
+    id: package-files
+    attributes:
+      label: Package files
+      description: List the package files you plan to submit, including custom-pet.json, sprites/idle/*.png, optional state folders, README.md, and preview/contact-sheet files.
+      render: text
     validations:
       required: true
   - type: textarea
     id: license
     attributes:
       label: Asset license/attribution
-      description: Explain who created the assets and what license applies.
+      description: Explain who created the assets, what license applies, and whether redistribution in this repository is allowed.
     validations:
       required: true
   - type: textarea
     id: previews
     attributes:
       label: Preview screenshots/GIFs
-      description: Drag in preview images or GIFs if available.
+      description: Drag in preview images, GIFs, or contact sheets. Include the preview HTML command you used if available.
+    validations:
+      required: true
   - type: textarea
     id: validation
     attributes:
       label: Validation command output
-      description: Paste output from `hermes-pet custom-pet validate <path>`.
+      description: Paste output from `hermes-pet custom-pet validate <path>` and any live WSL/Windows overlay preview evidence.
       render: shell
+    validations:
+      required: true
+  - type: checkboxes
+    id: contribution-checklist
+    attributes:
+      label: Contribution checklist
+      options:
+        - label: The package includes `custom-pet.json` and at least one `sprites/idle/*.png` frame.
+          required: true
+        - label: Asset names and PNG filenames use safe paths with no traversal or separators.
+          required: true
+        - label: I have the right to contribute every asset and included attribution/license details.
+          required: true
+        - label: I understand this is a curated repository contribution, not a hosted gallery upload.
+          required: true

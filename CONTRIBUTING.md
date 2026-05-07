@@ -90,14 +90,22 @@ Keep pull requests focused. For large behavior changes, open an issue first so t
 
 ## Custom Pet Contributions
 
+Custom pet contributions are curated issue/PR submissions. Start with the
+"Custom pet" issue template, then open a focused pull request after the package
+validates locally. See `docs/custom-pet-contributions.md` for the full workflow.
+
 Custom pet contributions should include:
 
-- A manifest.
-- Sprite files for the included states/animations.
-- A preview image or GIF when possible.
+- `custom-pet.json`.
+- Sprite files for the included states/animations, including `sprites/idle/*.png`.
+- Output from `hermes-pet custom-pet validate <path>`.
+- Preview evidence from `hermes-pet custom-pet preview <path> --output ...`.
 - License and attribution details for every asset.
 
 Do not submit copyrighted characters, trademarked mascots, scraped art, or generated assets with unclear licensing unless you own the rights or have explicit permission to contribute them.
+
+Hermes Pets does not run a hosted custom pet gallery in Phase 5. Accepted pets
+are reviewed repository contributions.
 
 ## What Probably Will Not Be Accepted
 
