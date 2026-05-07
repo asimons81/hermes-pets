@@ -50,4 +50,3 @@ Full overlay behavior means all of the following pass together:
   can share the supported install story.
 - GitHub install is the supported install path for Phase 5; PyPI and desktop
   installers are packaging decisions for a later milestone.
-

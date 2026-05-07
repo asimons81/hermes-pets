@@ -70,4 +70,3 @@ Maintainers may ask for changes when a package:
 
 Accepted custom pets are curated repository contributions, not automatically
 published gallery entries.
-

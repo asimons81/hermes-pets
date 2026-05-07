@@ -57,4 +57,3 @@ installer proof." It should:
   desktop installer should be treated as a separate follow-up.
 - Keep Linux/macOS installers out of scope until native overlay support is
   proven.
-
