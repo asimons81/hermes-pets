@@ -125,6 +125,45 @@ hermes-pet brief
 
 Keep the overlay running in the background. Use `wrap` or `run` for work you want in job history.
 
+## Hermes-Aware Context
+
+Phase 4 is schema-first. Hermes Pets can store project/session context and
+action hints on local events, but it does not add a live Hermes Agent, Nexus,
+Telegram, GitHub, calendar, or other adapter.
+
+Set defaults once per shell when a work session should be grouped:
+
+```bash
+export HERMES_PET_PROJECT_ID=hermes-pet
+export HERMES_PET_PROJECT_PATH=/home/tony/projects/hermes-pet
+export HERMES_PET_SESSION_ID=phase-4-local
+export HERMES_PET_SESSION_LABEL="Phase 4 local work"
+```
+
+Override defaults per command with shared flags:
+
+```bash
+hermes-pet emit approval_needed "Review deploy plan" \
+  --project-id hermes-pet \
+  --session-label "Phase 4"
+
+hermes-pet message --source telegram --sender "Ada" \
+  --project-id hermes-pet \
+  --session-label "Phase 4" \
+  --open-command "gh issue view 17" \
+  "Can you review this?"
+
+hermes-pet wrap --name "Tests" --project-id hermes-pet -- pytest
+```
+
+Precedence is CLI flags, environment variables, then safe inferred defaults.
+`run` and `wrap` infer the current git repository as project context when no
+explicit project is provided.
+
+Action hints are hints only. Hermes Pets stores and displays action labels,
+commands, and URLs in briefs and event history, but never executes them or opens
+URLs from event data.
+
 ## Custom Pets
 
 Install animated custom pets outside the repo:
@@ -204,6 +243,12 @@ Mark it urgent when it should cut through quiet handling:
 
 ```bash
 hermes-pet message --source telegram --sender "Ada" --urgent "Production is blocked"
+```
+
+Store a response hint without executing it:
+
+```bash
+hermes-pet message --source telegram --sender "Ada" --open-command "gh issue view 17" "Thread link"
 ```
 
 ## Quiet and Mute
@@ -300,6 +345,12 @@ Print a compact text version for chat:
 ```bash
 hermes-pet brief --telegram-text
 ```
+
+Briefs prioritize urgent events, approval requests, failed jobs, recent
+messages, and stored action hints. When recent events include useful
+project/session metadata, regular briefs add a project/session grouping section.
+The compact Telegram text keeps counts, the top message when present, the most
+useful group, and the suggested next action.
 
 ## Troubleshooting
 

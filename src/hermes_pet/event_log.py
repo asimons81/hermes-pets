@@ -4,27 +4,58 @@ from __future__ import annotations
 
 import json
 import os
+import shlex
 from pathlib import Path
 from typing import Any
+from urllib.parse import urlparse
 
-from hermes_pet.jobs import redact_text
+from hermes_pet.events import EVENT_SCHEMA, URGENCY_VALUES
+from hermes_pet.jobs import redact_command, redact_text
 
 EVENT_LOG_LIMIT = 200
 EVENT_TEXT_LIMIT = 280
 
 _SAFE_EVENT_KEYS = {
+    "action_command",
+    "action_label",
+    "action_url",
     "created_at",
     "duration_s",
     "exit_code",
     "id",
     "job_id",
     "job_name",
+    "privacy_summary",
+    "project_id",
+    "project_path",
+    "schema",
     "sender",
     "severity",
+    "session_id",
+    "session_label",
     "source",
+    "source_id",
     "text",
     "type",
+    "urgency",
     "urgent",
+}
+
+_TEXT_LIMITS = {
+    "action_command": 260,
+    "action_label": 120,
+    "action_url": 260,
+    "job_id": 120,
+    "job_name": 96,
+    "privacy_summary": 280,
+    "project_id": 120,
+    "project_path": 260,
+    "sender": 96,
+    "session_id": 120,
+    "session_label": 120,
+    "source": 96,
+    "source_id": 120,
+    "text": EVENT_TEXT_LIMIT,
 }
 
 
@@ -33,6 +64,28 @@ def _redact_and_truncate(value: object, *, limit: int) -> str:
     if len(text) <= limit:
         return text
     return text[: max(0, limit - 3)].rstrip() + "..."
+
+
+def _redact_action_command(value: object, *, limit: int) -> str:
+    text = _redact_and_truncate(value, limit=max(limit * 4, 512))
+    try:
+        parts = shlex.split(text)
+    except ValueError:
+        parts = []
+    if parts:
+        redacted_parts, _ = redact_command(parts)
+        text = " ".join(redacted_parts)
+    if len(text) <= limit:
+        return text
+    return text[: max(0, limit - 3)].rstrip() + "..."
+
+
+def _clean_action_url(value: object, *, limit: int) -> str:
+    text = _redact_and_truncate(value, limit=limit)
+    parsed = urlparse(text)
+    if parsed.scheme not in {"http", "https"} or not parsed.netloc:
+        return ""
+    return text
 
 
 def state_dir() -> Path:
@@ -50,9 +103,22 @@ def _clean_event(event: dict[str, Any]) -> dict[str, Any]:
         if key not in event or event[key] is None:
             continue
         value = event[key]
-        if key in {"text", "sender", "source", "job_name"}:
-            limit = EVENT_TEXT_LIMIT if key == "text" else 96
+        if key == "action_command":
+            clean[key] = _redact_action_command(value, limit=_TEXT_LIMITS[key])
+        elif key == "action_url":
+            cleaned_url = _clean_action_url(value, limit=_TEXT_LIMITS[key])
+            if cleaned_url:
+                clean[key] = cleaned_url
+        elif key in _TEXT_LIMITS:
+            limit = _TEXT_LIMITS[key]
             clean[key] = _redact_and_truncate(value, limit=limit)
+        elif key == "schema":
+            if str(value) == EVENT_SCHEMA:
+                clean[key] = EVENT_SCHEMA
+        elif key == "urgency":
+            urgency = str(value or "").strip().lower().replace("-", "_")
+            if urgency in URGENCY_VALUES:
+                clean[key] = urgency
         elif key in {"urgent"}:
             clean[key] = bool(value)
         elif key in {"exit_code"}:
@@ -70,6 +136,11 @@ def _clean_event(event: dict[str, Any]) -> dict[str, Any]:
     return clean
 
 
+def safe_event(event: dict[str, Any]) -> dict[str, Any]:
+    """Return the privacy-safe event payload used for storage and broadcast."""
+    return _clean_event(event)
+
+
 def load_events(base_dir: str | Path | None = None) -> list[dict[str, Any]]:
     path = events_path(base_dir)
     if not path.exists():
@@ -81,7 +152,7 @@ def load_events(base_dir: str | Path | None = None) -> list[dict[str, Any]]:
         return []
     if not isinstance(data, list):
         return []
-    return [item for item in data if isinstance(item, dict)]
+    return [_clean_event(item) for item in data if isinstance(item, dict)]
 
 
 def save_events(events: list[dict[str, Any]], base_dir: str | Path | None = None) -> None:

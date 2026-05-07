@@ -190,6 +190,8 @@ Useful environment variables:
 - `HERMES_PET_WS_URL`: explicit overlay bridge URL.
 - `HERMES_PET_POSITION_FILE`: overlay window position file.
 - `HERMES_PET_SPECIES`: overlay species, default `cat`.
+- `HERMES_PET_PROJECT_ID`, `HERMES_PET_PROJECT_PATH`: default structured project context for emitted events.
+- `HERMES_PET_SESSION_ID`, `HERMES_PET_SESSION_LABEL`: default structured session context for emitted events.
 - `HERMES_PET_CLICK_THROUGH=1`: make the overlay ignore mouse input.
 - `HERMES_PET_FOCUSABLE=1`: allow the overlay to accept focus.
 - `HERMES_PET_DEBUG_EVENTS=1`, `HERMES_PET_DEBUG_ANIMATION=1`, `HERMES_PET_DEBUG_DRAG=1`, `HERMES_PET_DEBUG_SPRITE=1`: diagnostics.
@@ -219,6 +221,48 @@ status
 ```
 
 Events are also appended to local event history under `~/.hermes_pet`.
+
+### Hermes-aware context
+
+Phase 4 events are schema-first and local-only. They prepare Hermes-aware
+integrations by storing stable context fields, but they do not add a live Hermes
+Agent, Nexus, Telegram, GitHub, calendar, or other adapter.
+
+All emitted events continue to use `schema: hermes.pet.event.v1`. The stable
+context fields are optional:
+
+- `project_id`, `project_path`
+- `session_id`, `session_label`
+- `source`, `source_id`
+- `urgency`: `normal`, `important`, or `urgent`
+- `action_label`, `action_command`, `action_url`
+- `privacy_summary`
+
+Use CLI flags for per-event context:
+
+```bash
+hermes-pet emit approval_needed "Review deploy plan" \
+  --project-id hermes-pet \
+  --session-label "Phase 4"
+
+hermes-pet wrap --name "API tests" \
+  --project-id hermes-pet \
+  --session-id phase-4-local \
+  -- pytest
+```
+
+Or set environment defaults:
+
+```bash
+export HERMES_PET_PROJECT_ID=hermes-pet
+export HERMES_PET_PROJECT_PATH=/home/tony/projects/hermes-pet
+export HERMES_PET_SESSION_ID=phase-4-local
+export HERMES_PET_SESSION_LABEL="Phase 4 local work"
+```
+
+Precedence is CLI flags, then environment variables, then safe inferred
+defaults. `run` and `wrap` infer the current git repository as project context
+when no explicit project is provided.
 
 ## Wrap and Run
 
@@ -301,6 +345,10 @@ Store an open/respond hint without executing it:
 ```bash
 hermes-pet message --source telegram --sender "Ada" --open-command "xdg-open https://example.test" "Thread link"
 ```
+
+Action hints are stored and displayed only. Hermes Pets never executes
+`action_command` or opens `action_url` from an event. Use privacy-safe labels and
+summaries, and avoid storing raw message bodies, tokens, or private URLs.
 
 ## Quiet, Mute, and Prefs
 
@@ -388,6 +436,11 @@ hermes-pet state cleanup --dry-run --keep-jobs 50 --keep-events 100
 hermes-pet state cleanup --keep-jobs 50 --keep-events 100
 ```
 
+Phase 4 metadata in event history and state export is allowlisted and redacted.
+Unknown event metadata is dropped, and structured fields such as action hints,
+paths, source labels, session labels, and privacy summaries are cleaned before
+they appear in exports.
+
 ## Brief
 
 Summarize recent local jobs and events:
@@ -409,6 +462,11 @@ Print a compact chat-friendly version:
 ```bash
 hermes-pet brief --telegram-text
 ```
+
+Briefs prioritize urgent events, approval requests, failed jobs, recent
+messages, and stored action hints. When multiple recent events include
+project/session context, the brief groups them by project and session. The
+Telegram-friendly form keeps the same priorities but stays compact.
 
 ## Doctor
 
@@ -469,6 +527,19 @@ node scripts/smoke-renderer.js
 ```
 
 Renderer smoke coverage is valuable but headless. It does not prove Electron launched, the Windows overlay is visible, the sprite is correctly framed on screen, or the bridge can deliver events to the live window.
+
+For Phase 4 Hermes-aware integration readiness, run:
+
+```bash
+pytest
+node scripts/smoke-renderer.js
+scripts/verify-packaged-overlay.sh
+scripts/smoke-hermes-pet.sh --temp-state
+scripts/verify-live-overlay.sh
+```
+
+Run `scripts/verify-live-overlay.sh` when the local environment can launch the
+real WSL/Windows overlay.
 
 ## Shell Helpers
 

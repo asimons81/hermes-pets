@@ -58,7 +58,7 @@ from hermes_pet.engine import (
     load_pet,
     save_pet,
 )
-from hermes_pet.event_log import append_event, compact_events, load_events
+from hermes_pet.event_log import append_event, compact_events, load_events, safe_event
 from hermes_pet.events import EVENT_TYPES, PetEventError, build_event
 from hermes_pet.jobs import (
     HISTORY_LIMIT,
@@ -945,6 +945,7 @@ def _send_pet_event(event_type: str, text: str, *, required: bool, **extra: obje
     except PetEventError as exc:
         raise PetCLIError(str(exc)) from exc
 
+    event = safe_event(event)
     try:
         append_event(event, base_dir=_state_dir())
     except Exception as exc:
@@ -965,10 +966,58 @@ def _send_pet_event(event_type: str, text: str, *, required: bool, **extra: obje
     return True, event
 
 
+def _clean_context_value(value: object) -> str:
+    return _single_line(str(value or "")).strip()
+
+
+def _git_project_defaults() -> dict[str, object]:
+    try:
+        result = subprocess.run(
+            ["git", "rev-parse", "--show-toplevel"],
+            cwd=str(Path.cwd()),
+            check=False,
+            capture_output=True,
+            text=True,
+            timeout=2,
+        )
+    except Exception:
+        return {}
+    if result.returncode != 0:
+        return {}
+    root = _clean_context_value(result.stdout)
+    if not root:
+        return {}
+    path = Path(root).expanduser()
+    return {
+        "project_id": path.name,
+        "project_path": str(path),
+    }
+
+
+def _event_context_from_args(args: argparse.Namespace, *, infer_project: bool = False) -> dict[str, object]:
+    context: dict[str, object] = {}
+    env_map = {
+        "project_id": "HERMES_PET_PROJECT_ID",
+        "project_path": "HERMES_PET_PROJECT_PATH",
+        "session_id": "HERMES_PET_SESSION_ID",
+        "session_label": "HERMES_PET_SESSION_LABEL",
+    }
+    for key, env_key in env_map.items():
+        cli_value = _clean_context_value(getattr(args, key, ""))
+        env_value = _clean_context_value(os.environ.get(env_key, ""))
+        value = cli_value or env_value
+        if value:
+            context[key] = value
+
+    if infer_project and not context.get("project_id") and not context.get("project_path"):
+        context.update(_git_project_defaults())
+    return context
+
+
 def _cmd_emit(args: argparse.Namespace) -> int:
     event_type = str(args.event_type or "").strip().lower().replace("-", "_")
     text = " ".join(args.text).strip()
-    _, event = _send_pet_event(event_type, text, required=True)
+    _, event = _send_pet_event(event_type, text, required=True, **_event_context_from_args(args))
 
     print(f"📡 Emitted {event['type']}: {event['text']}")
     return 0
@@ -997,7 +1046,9 @@ def _cmd_message(args: argparse.Namespace) -> int:
         "urgent": urgent,
     }
     if open_command:
-        extra["open_command"] = open_command
+        extra["action_command"] = open_command
+
+    extra.update(_event_context_from_args(args))
 
     _, event = _send_pet_event("message_received", message_text, required=True, **extra)
     urgency = " urgent" if urgent else ""
@@ -1423,8 +1474,80 @@ def _event_line(event: dict[str, object], *, limit: int = 90) -> str:
     if event_type == "message_received":
         source = str(event.get("source") or "message")
         sender = str(event.get("sender") or "someone")
-        return _truncate_text(f"{source} from {sender}: {text}", limit)
-    return _truncate_text(text or event_type, limit)
+        line = f"{source} from {sender}: {text}" if text else f"{source} from {sender}"
+    else:
+        line = text or event_type
+    hint = _event_action_hint(event, limit=max(24, limit // 2))
+    if hint:
+        line = f"{line} | Hint: {hint}"
+    return _truncate_text(line, limit)
+
+
+def _event_action_hint(event: dict[str, object], *, limit: int = 70) -> str:
+    parts = []
+    for key in ("action_label", "action_command", "action_url"):
+        value = _single_line(str(event.get(key) or ""))
+        if value:
+            parts.append(value)
+    if not parts:
+        return ""
+    return _truncate_text(" | ".join(parts), limit)
+
+
+def _event_context_label(event: dict[str, object]) -> str:
+    project = str(event.get("project_id") or "").strip()
+    if not project:
+        project_path = str(event.get("project_path") or "").strip()
+        project = Path(project_path).name if project_path else ""
+    session = str(event.get("session_label") or event.get("session_id") or "").strip()
+    if project and session:
+        return f"{project} / {session}"
+    return project or session
+
+
+def _event_is_urgent(event: dict[str, object]) -> bool:
+    return (
+        event.get("urgent") is True
+        or str(event.get("urgency") or "").lower() == "urgent"
+        or (event.get("type") == "message_received" and event.get("severity") == "warning")
+    )
+
+
+def _event_priority(event: dict[str, object]) -> tuple[int, int, int]:
+    event_type = str(event.get("type") or "")
+    if _event_is_urgent(event):
+        rank = 0
+    elif event_type == "approval_needed":
+        rank = 1
+    elif event_type == "job_failed":
+        rank = 2
+    elif event_type == "message_received":
+        rank = 3
+    elif _event_action_hint(event):
+        rank = 4
+    else:
+        rank = 9
+    event_time = _item_time(event)
+    seconds = event_time.hour * 3600 + event_time.minute * 60 + event_time.second
+    return rank, -event_time.toordinal(), -seconds
+
+
+def _grouped_event_lines(events: list[dict[str, object]]) -> list[str]:
+    groups: dict[str, list[dict[str, object]]] = {}
+    for event in events:
+        label = _event_context_label(event)
+        if label:
+            groups.setdefault(label, []).append(event)
+    grouped_count = sum(len(items) for items in groups.values())
+    if grouped_count < 2 and len(groups) < 2:
+        return []
+
+    lines: list[str] = []
+    for label, items in sorted(groups.items(), key=lambda item: (-len(item[1]), item[0]))[:4]:
+        sorted_items = sorted(items, key=_event_priority)
+        preview = "; ".join(_event_line(event, limit=72) for event in sorted_items[:2])
+        lines.append(f"{label}: {len(items)} event(s)" + (f" - {preview}" if preview else ""))
+    return lines
 
 
 def _job_line(job: dict[str, object], *, limit: int = 90) -> str:
@@ -1451,6 +1574,9 @@ def _build_brief(*, since: timedelta, telegram_text: bool = False) -> str:
     pending = [event for event in events if event.get("type") == "approval_needed"]
     messages = [event for event in events if event.get("type") == "message_received"]
     status_events = [event for event in events if event.get("type") in {"status", "job_started", "job_finished", "job_failed"}]
+    prioritized_events = sorted(events, key=_event_priority)
+    urgent_events = [event for event in prioritized_events if _event_is_urgent(event)]
+    actionable_events = [event for event in prioritized_events if event.get("type") == "approval_needed" or _event_action_hint(event)]
 
     latest_status = "No recent activity found."
     if status_events:
@@ -1460,10 +1586,14 @@ def _build_brief(*, since: timedelta, telegram_text: bool = False) -> str:
     elif messages:
         latest_status = f"Latest message: {_event_line(messages[0])}"
 
-    if pending:
+    if urgent_events:
+        next_action = f"Handle urgent local event: {_event_line(urgent_events[0], limit=70)}"
+    elif pending:
         next_action = f"Review approval needed: {_event_line(pending[0], limit=70)}"
     elif failures:
         next_action = f"Retry or inspect latest failure: {_job_line(failures[0], limit=70)}"
+    elif actionable_events:
+        next_action = f"Use stored action hint: {_event_line(actionable_events[0], limit=70)}"
     elif messages:
         next_action = f"Reply to latest message: {_event_line(messages[0], limit=70)}"
     elif successes:
@@ -1471,16 +1601,21 @@ def _build_brief(*, since: timedelta, telegram_text: bool = False) -> str:
     else:
         next_action = "Run work through hermes-pet wrap to build useful history."
 
+    grouped_lines = _grouped_event_lines(events)
+
     if telegram_text:
         parts = [
             f"Hermes brief ({_format_duration(since.total_seconds())})",
             f"Status: {latest_status}",
+            f"Urgent: {len(urgent_events)}",
             f"Failures: {len(failures)}",
             f"Successes: {len(successes)}",
             f"Pending: {len(pending)}",
         ]
         if messages:
             parts.append(f"Msg: {_event_line(messages[0], limit=70)}")
+        if grouped_lines:
+            parts.append(f"Group: {_truncate_text(grouped_lines[0], 82)}")
         parts.append(f"Next: {next_action}")
         return "\n".join(parts)
 
@@ -1492,6 +1627,10 @@ def _build_brief(*, since: timedelta, telegram_text: bool = False) -> str:
     lines.append("Recent successes: " + ("none" if not successes else "; ".join(_job_line(job) for job in successes[:3])))
     lines.append("Pending/approval-needed: " + ("none" if not pending else "; ".join(_event_line(event) for event in pending[:3])))
     lines.append("Recent messages: " + ("none" if not messages else "; ".join(_event_line(event) for event in messages[:3])))
+    lines.append("Top local events: " + ("none" if not prioritized_events else "; ".join(_event_line(event) for event in prioritized_events[:5])))
+    if grouped_lines:
+        lines.append("By project/session:")
+        lines.extend(f"- {line}" for line in grouped_lines)
     lines.append(f"Suggested next action: {next_action}")
     return "\n".join(lines)
 
@@ -1501,7 +1640,7 @@ def _cmd_brief(args: argparse.Namespace) -> int:
     telegram_text = bool(getattr(args, "telegram_text", False))
     summary = _build_brief(since=since, telegram_text=telegram_text)
     if getattr(args, "emit", False):
-        ok, event = _send_pet_event("daily_brief", summary, required=False)
+        ok, event = _send_pet_event("daily_brief", summary, required=False, **_event_context_from_args(args))
         if ok:
             print(f"📡 Emitted {event['type']}: {event['text']}")
         else:
@@ -1632,6 +1771,16 @@ def _cmd_retry(args: argparse.Namespace) -> int:
 
 
 def _run_wrapped_command(command: list[str], *, name: str, status_interval: float) -> int:
+    return _run_wrapped_command_with_context(command, name=name, status_interval=status_interval, event_context={})
+
+
+def _run_wrapped_command_with_context(
+    command: list[str],
+    *,
+    name: str,
+    status_interval: float,
+    event_context: dict[str, object],
+) -> int:
     if not command:
         raise PetCLIError("No command provided. Use: hermes-pet wrap --name \"Job\" -- <command>")
 
@@ -1645,6 +1794,7 @@ def _run_wrapped_command(command: list[str], *, name: str, status_interval: floa
         "job_name": job_name,
         "command": redacted_command,
     }
+    event_base.update(event_context)
 
     bridge_warned = False
     if not _emit_job_event("job_started", job_name, warned=bridge_warned, **event_base):
@@ -1848,10 +1998,22 @@ def _cmd_wrap(args: argparse.Namespace) -> int:
     command = _clean_command_remainder(list(args.command or []))
     if not command:
         command = _raw_command_after_separator(args)
-    return _run_wrapped_command(
+    return _run_wrapped_command_with_context(
         command,
         name=str(getattr(args, "name", "") or ""),
         status_interval=max(0.0, float(getattr(args, "status_interval", 60.0) or 0.0)),
+        event_context=_event_context_from_args(args, infer_project=True),
+    )
+
+
+def _add_event_context_args(parser: argparse.ArgumentParser) -> None:
+    parser.add_argument("--project-id", default="", help="Structured event project id. Defaults to HERMES_PET_PROJECT_ID.")
+    parser.add_argument("--project-path", default="", help="Structured event project path. Defaults to HERMES_PET_PROJECT_PATH.")
+    parser.add_argument("--session-id", default="", help="Structured event session id. Defaults to HERMES_PET_SESSION_ID.")
+    parser.add_argument(
+        "--session-label",
+        default="",
+        help="Human-facing event session label. Defaults to HERMES_PET_SESSION_LABEL.",
     )
 
 
@@ -1963,6 +2125,7 @@ def _build_parser() -> argparse.ArgumentParser:
         help="Event type to emit.",
     )
     emit.add_argument("text", nargs="+", help="Human-facing event text.")
+    _add_event_context_args(emit)
     emit.set_defaults(func=_cmd_emit)
 
     message = subparsers.add_parser("message", help="Emit an external message notification.")
@@ -1978,6 +2141,7 @@ def _build_parser() -> argparse.ArgumentParser:
         default="",
         help="Local command or hint for how to open/respond; stored only, never executed by the overlay.",
     )
+    _add_event_context_args(message)
     message.add_argument("text", nargs="+", help="Message body to show, truncated before emitting.")
     message.set_defaults(func=_cmd_message)
 
@@ -1997,6 +2161,7 @@ def _build_parser() -> argparse.ArgumentParser:
         action="store_true",
         help="Print a compact Telegram-friendly summary.",
     )
+    _add_event_context_args(brief)
     brief.set_defaults(func=_cmd_brief)
 
     quiet = subparsers.add_parser("quiet", help="Adjust quiet mode for overlay bubbles.")
@@ -2096,6 +2261,7 @@ def _build_parser() -> argparse.ArgumentParser:
         default=60.0,
         help="Seconds between long-running status events; set 0 to disable.",
     )
+    _add_event_context_args(run)
     run.add_argument("command", nargs=argparse.REMAINDER, help="Command to run after --.")
     run.set_defaults(func=_cmd_wrap)
 
@@ -2107,6 +2273,7 @@ def _build_parser() -> argparse.ArgumentParser:
         default=60.0,
         help="Seconds between long-running status events; set 0 to disable.",
     )
+    _add_event_context_args(wrap)
     wrap.add_argument("command", nargs=argparse.REMAINDER, help="Command to run after --.")
     wrap.set_defaults(func=_cmd_wrap)
 
