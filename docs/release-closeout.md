@@ -89,3 +89,39 @@ workflow.
 Use `0.1.1` only if the release task intentionally narrows scope to documentation
 and patch-level packaging cleanup without presenting Phase 5 as the next public
 readiness release.
+
+## v0.3.0 Dashboard Preview Owner Review
+
+The v0.3.0 dashboard preview is prepared locally for owner review only. Do not
+push, tag, publish to PyPI, publish an installer, or create a release from this
+work unless a later task explicitly asks for it.
+
+Scope completed locally:
+
+- Localhost-only `hermes-pet dashboard` with per-process token auth.
+- Static dashboard overview with pet state, selected custom pet, prefs summary,
+  recent jobs/events, bridge status, and achievement preview.
+- Custom pet dashboard APIs and UI for typed-path import, select, remove, list,
+  invalid state display, and overlay test event.
+- Preferences APIs and UI for profile, quiet mode, tray-on-urgent, idle bubbles,
+  throttle, and bridge-offline-safe saves.
+- Opt-in voice preview CLI/API/UI with adapter command, env override, stdin text,
+  metadata env vars, allowlisted events, timeout handling, and explicit test.
+- Foundational achievement ledger with idempotent unlocks and simple overlay
+  event handling.
+- Dashboard package-data verification for wheel and sdist artifacts.
+- Dashboard visual QA screenshots under `docs/assets/hermes-pets-dashboard-v030-*.png`
+  with evidence in `docs/dashboard-v030-qa.md`.
+
+Out of scope remains explicit: PyPI, installer publishing, hosted gallery,
+drag/drop import, full voice mode, and rich achievement celebrations.
+
+Owner-review readiness stack:
+
+```bash
+pytest
+node scripts/smoke-renderer.js
+scripts/smoke-hermes-pet.sh --temp-state
+scripts/verify-packaged-overlay.sh
+python3 scripts/verify-package-artifacts.py
+```

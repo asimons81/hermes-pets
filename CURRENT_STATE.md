@@ -16,6 +16,12 @@ Snapshot date: 2026-05-07
 - `hermes-pet message` emits external message notifications with source, sender, urgency, and optional open-command metadata.
 - Quiet, silent, mute, and preference controls exist.
 - Named notification profiles exist for normal, focus, pairing, demo, and silent workflows.
+- `hermes-pet dashboard` serves a polished localhost-only, token-protected dashboard preview on port `17474` by default.
+- Dashboard APIs expose state snapshots, notification prefs, custom pet management, voice preview controls, achievements, and a test overlay event.
+- Dashboard static assets are packaged with wheel/sdist artifacts and work from editable installs.
+- v0.3.0 dashboard QA screenshots and evidence are recorded in `docs/assets/hermes-pets-dashboard-v030-overview.png` and `docs/dashboard-v030-qa.md`.
+- Voice preview is opt-in only, off by default, adapter-command based, and bounded by an event allowlist.
+- Foundational achievements persist in `achievements.json` and unlock idempotently for custom pets, jobs, retryable failures, and level milestones.
 - `hermes-pet brief` summarizes recent jobs and events.
 - `hermes-pet state export` produces compact redacted diagnostics, and `hermes-pet state cleanup` supports bounded local maintenance.
 - Renderer smoke coverage checks startup, reconnect, event reactions, custom pet loading, and fallback behavior without launching Electron.
@@ -64,6 +70,9 @@ hermes-pet quiet --off
 hermes-pet mute 30m
 hermes-pet profile focus
 hermes-pet prefs
+hermes-pet dashboard --no-open
+hermes-pet voice status
+hermes-pet voice test "Hermes Pets voice preview test."
 hermes-pet state export --since 24h
 hermes-pet state cleanup --dry-run
 hermes-pet brief --since 24h
@@ -95,6 +104,10 @@ hpbrief
 - `pyproject.toml`: Python package metadata and CLI entry points.
 - `src/hermes_pet/cli.py`: CLI commands, launch, doctor, jobs, retry, prefs, brief.
 - `src/hermes_pet/bridge.py`: WebSocket bridge and event delivery.
+- `src/hermes_pet/dashboard.py`: localhost dashboard server and API handlers.
+- `src/hermes_pet/dashboard/`: packaged static dashboard UI.
+- `src/hermes_pet/voice.py`: opt-in voice preview preferences and adapter execution.
+- `src/hermes_pet/achievements.py`: foundational achievement definitions and state.
 - `src/hermes_pet/custom_pets.py`: custom pet validation, import, selection, and bridge payload helpers.
 - `src/hermes_pet/events.py`: normalized local event schema.
 - `src/hermes_pet/event_log.py`: local event history.
@@ -115,6 +128,8 @@ hpbrief
 - `CUSTOM_PETS.md`: custom pet package format and CLI docs.
 - `docs/custom-pet-contributions.md`: community custom pet submission, validation, preview, licensing, and curation workflow.
 - `docs/release-closeout.md`: Phase 5 verification evidence and next-version recommendation mechanics.
+- `docs/dashboard-polish-audit.md`: v0.3.0 dashboard structure, API contract, and polish constraints.
+- `docs/dashboard-v030-qa.md`: v0.3.0 dashboard screenshot and readiness evidence.
 - `docs/platform-support.md`: supported platform matrix, CLI-only boundaries, and known platform blockers.
 
 ## Known Limitations
@@ -129,11 +144,16 @@ hpbrief
 - `retry` only targets the latest failed job and refuses redacted sensitive commands.
 - The smoke script intentionally creates one successful job and one expected failed job in the active state directory; use `--temp-state` to isolate that history.
 - `emit`, `message`, and `brief --emit` require the bridge/overlay to be running.
+- The dashboard is localhost-only and token-protected. It is not a hosted or remote UI.
+- Voice mode is preview plumbing only; no provider selection or always-on personality mode is included.
+- Achievements are a compact state foundation only; no rich celebration system is included.
 
 ## Next Recommended Improvements
 
 - Use the `v0.2.0` release as the baseline for the next platform and packaging
   milestone; keep any PyPI upload or installer work as an explicit future task.
+- Complete owner review of the local v0.3.0 dashboard preview before any push,
+  tag, PyPI upload, installer work, or release creation.
 - Expand automated CLI tests around parser behavior, wrapped command execution, and brief formatting.
 - Add deeper live overlay checks for drag ergonomics, always-on-top behavior, and multi-monitor/DPI setups.
 - Add richer custom pet preview controls such as playback speed and side-by-side state comparison.

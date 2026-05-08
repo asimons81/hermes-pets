@@ -49,6 +49,43 @@ hermes-pet close
 
 Add `--bridge` only when you also want to stop the event bridge.
 
+## Local Dashboard Preview
+
+Start the v0.3.0 dashboard from WSL:
+
+```bash
+hermes-pet dashboard
+hermes-pet dashboard --no-open
+```
+
+It binds to localhost and prints a private token URL. Keep that URL local and do
+not share it in logs. The dashboard and APIs reject requests without the token.
+
+Use it for daily operator work: inspect pet state, recent jobs/events, bridge
+status, custom pets, notification preferences, opt-in voice preview, and
+foundational achievements. Custom pet import is intentionally typed-path only in
+v0.3.0; validate or preview packages with the CLI before importing them from the
+dashboard.
+
+The polished v0.3.0 dashboard screenshot and QA evidence live in
+`docs/assets/hermes-pets-dashboard-v030-overview.png` and
+`docs/dashboard-v030-qa.md`.
+
+For dashboard QA, use a temporary state root:
+
+```bash
+qa_home="$(mktemp -d)"
+HERMES_PET_HOME="$qa_home" hermes-pet hatch
+HERMES_PET_HOME="$qa_home" hermes-pet custom-pet import docs/fixtures/custom-pets/minimal-spark --name minimal-spark
+HERMES_PET_HOME="$qa_home" hermes-pet custom-pet use minimal-spark
+HERMES_PET_HOME="$qa_home" hermes-pet dashboard --no-open
+```
+
+Then verify desktop and narrow/mobile views for overview, custom pets,
+preferences, voice, achievements, empty states, populated states, and API error
+states. There should be no overlapping controls, clipped text, blank placeholder
+panels, or marketing-page layout.
+
 ## Phase 2 Manual Live Overlay Verification
 
 Use this checklist before calling Phase 2 overlay behavior ready. Run it from

@@ -14,6 +14,7 @@ The repo combines a Python CLI, a WebSocket bridge, local state under `~/.hermes
 - Send message notifications from external channels.
 - Control quiet/mute preferences for bubbles.
 - Generate a short local brief from recent jobs and events.
+- Open a localhost-only, token-protected dashboard for state, custom pets, prefs, voice preview, and achievements.
 - Diagnose bridge, overlay, state, prefs, and job-history health.
 
 Pet state and local history live under `~/.hermes_pet` by default. Set `HERMES_PET_HOME` when you intentionally want an isolated state directory. Back up the directory itself when you need a restorable copy; `hermes-pet state export` is a redacted diagnostic snapshot, not a backup format.
@@ -42,6 +43,7 @@ pip install -e .
 hermes-pet launch
 hermes-pet emit bubble "Hello from Hermes Pets"
 hermes-pet doctor
+hermes-pet dashboard --no-open
 ```
 
 On WSL/Windows, run the CLI from WSL. `hermes-pet launch` starts the Python bridge in WSL and opens the Electron overlay through the Windows PowerShell launcher.
@@ -121,6 +123,37 @@ hermes-pet play
 hermes-pet species
 ```
 
+## Local Dashboard Preview
+
+v0.3.0 adds a local dashboard preview:
+
+```bash
+hermes-pet dashboard
+hermes-pet dashboard --no-open
+hermes-pet dashboard --host 127.0.0.1 --port 17474
+```
+
+The dashboard binds to localhost only and prints a per-process token URL. Keep
+that URL private. Requests without the token are rejected, including API calls.
+This is not a hosted or remote dashboard.
+
+<img src="docs/assets/hermes-pets-dashboard-v030-overview.png" alt="Hermes Pets v0.3.0 local dashboard overview with active pet, signal feed, and activity panels" width="720">
+
+The dashboard is the working console, not a marketing page. It shows the pet,
+selected custom pet, notification prefs, recent jobs/events, bridge status,
+voice preview controls, and foundational achievements. The overview centers the
+active pet, keeps recent wrapped-job signal close by, and shows local bridge
+health without implying hosted access. It also supports:
+
+- importing a custom pet by typed local path and installed name;
+- selecting or removing installed custom pets;
+- changing notification profile, quiet mode, tray/idle toggles, and bubble throttle;
+- enabling/disabling opt-in voice preview and running one harmless adapter test;
+- sending a dashboard test event to the overlay when the bridge is available.
+
+No drag/drop import, hosted gallery, full voice mode, or rich achievement
+celebrations are included in v0.3.0.
+
 ## Custom Animated Pets
 
 Hermes Pets can use custom animated sprite packages without adding generated assets to the repo. Custom pets install into the active state directory:
@@ -141,6 +174,11 @@ hermes-pet custom-pet use <name>
 hermes-pet custom-pet current
 hermes-pet custom-pet remove <name>
 ```
+
+The same import/select/remove workflow is available in the local dashboard. Use
+the CLI for validation and preview HTML when preparing a package, then use the
+dashboard when you want a compact operator surface for selecting or removing
+installed pets.
 
 `<path>` can be a finalized `hatch-pet` run or a package with `custom-pet.json` and `sprites/<state>/*.png`. `idle` is required; optional states fall back to idle when missing. See `CUSTOM_PETS.md` for the package format and the repo-local Codex skill at `.codex/skills/hermes-pet-hatch/SKILL.md`.
 
@@ -209,6 +247,25 @@ Useful environment variables:
 - `HERMES_PET_CLICK_THROUGH=1`: make the overlay ignore mouse input.
 - `HERMES_PET_FOCUSABLE=1`: allow the overlay to accept focus.
 - `HERMES_PET_DEBUG_EVENTS=1`, `HERMES_PET_DEBUG_ANIMATION=1`, `HERMES_PET_DEBUG_DRAG=1`, `HERMES_PET_DEBUG_SPRITE=1`: diagnostics.
+- `HERMES_PET_TTS_COMMAND`: optional voice-preview adapter override. Event text is sent on stdin.
+
+## Voice Preview
+
+Voice mode is off by default and remains an opt-in preview in v0.3.0:
+
+```bash
+hermes-pet voice status
+hermes-pet voice on
+hermes-pet voice off
+hermes-pet voice set-command -- <command>
+hermes-pet voice test "Hermes Pets voice preview test."
+```
+
+The adapter command receives text on stdin and event metadata in environment
+variables such as `HERMES_PET_TTS_EVENT_TYPE`, `HERMES_PET_TTS_SEVERITY`, and
+`HERMES_PET_TTS_URGENCY`. Preview voice events are allowlisted to
+`message_received`, `job_failed`, `approval_needed`, and explicit tests.
+Missing, failing, disabled, or timed-out voice commands do not break pet events.
 
 ## Emit Events
 
@@ -554,6 +611,22 @@ scripts/verify-live-overlay.sh
 
 Run `scripts/verify-live-overlay.sh` when the local environment can launch the
 real WSL/Windows overlay.
+
+For v0.3.0 dashboard preview readiness, run the final local stack without
+pushing, tagging, publishing, or uploading:
+
+```bash
+pytest
+node scripts/smoke-renderer.js
+scripts/smoke-hermes-pet.sh --temp-state
+scripts/verify-packaged-overlay.sh
+python3 scripts/verify-package-artifacts.py
+```
+
+Then record dashboard QA evidence by launching `hermes-pet dashboard --no-open`
+against a temporary `HERMES_PET_HOME`, importing/selecting
+`docs/fixtures/custom-pets/minimal-spark`, changing prefs, running a harmless
+voice test adapter, and capturing desktop plus narrow/mobile screenshots.
 
 ## Shell Helpers
 
