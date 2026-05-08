@@ -123,9 +123,9 @@ hermes-pet play
 hermes-pet species
 ```
 
-## Local Dashboard Preview
+## Local Dashboard and Achievements
 
-v0.3.0 adds a local dashboard preview:
+v0.3.0 adds a local dashboard:
 
 ```bash
 hermes-pet dashboard
@@ -135,7 +135,9 @@ hermes-pet dashboard --host 127.0.0.1 --port 17474
 
 The dashboard binds to localhost only and prints a per-process token URL. Keep
 that URL private. Requests without the token are rejected, including API calls.
-This is not a hosted or remote dashboard.
+The token is also stored in a local dashboard cookie so browser navigation can
+continue to call the protected API without exposing an unauthenticated control
+surface. This is not a hosted or remote dashboard.
 
 <img src="docs/assets/hermes-pets-dashboard-v030-overview.png" alt="Hermes Pets v0.3.0 local dashboard overview with active pet, signal feed, and activity panels" width="720">
 
@@ -143,23 +145,43 @@ The dashboard is the working console, not a marketing page. It shows the pet,
 selected custom pet, notification prefs, recent jobs/events, bridge status,
 voice preview controls, and foundational achievements. The overview centers the
 active pet, keeps recent wrapped-job signal close by, and shows local bridge
-health without implying hosted access. It also supports:
+health without implying hosted access.
 
-- changing the active pet to a built-in species or hatching a fresh random pet;
-- importing a custom pet by typed local path and installed name;
-- selecting, clearing, or removing installed custom pet visual packages;
-- changing notification profile, quiet mode, tray/idle toggles, and bubble throttle;
-- enabling/disabling opt-in voice preview and running one harmless adapter test;
-- sending a dashboard test event to the overlay when the bridge is available.
+The Change Pet view can switch to a specific built-in species or hatch a fresh
+random pet. Both choices replace the canonical active pet in `pet.json`, matching
+`hermes-pet hatch` reset semantics: XP, stats, interactions, milestones, variant,
+hat, and timestamps start fresh. Changing the active built-in pet also clears the
+current custom visual selection so the visible companion returns to the selected
+built-in species, while installed custom pet packages stay on disk.
 
-Changing to a built-in species or using random hatch replaces the canonical
-active pet in `pet.json`. It matches `hermes-pet hatch` behavior: XP, stats,
-interactions, and milestones start fresh. That action also clears the current
-custom visual selection so the visible pet returns to the built-in species, but
-installed custom pet packages are kept.
+<img src="docs/assets/hermes-pets-dashboard-v030-change-pet.png" alt="Hermes Pets v0.3.0 Change Pet dashboard view with built-in species and random hatch controls" width="720">
 
-No drag/drop import, hosted gallery, full voice mode, or rich achievement
-celebrations are included in v0.3.0.
+The Custom Pets view mirrors the CLI workflow for local visual packages:
+
+- `Import` installs a package from a typed local path with an installed name.
+- `Use` selects an installed custom pet as the current visual package.
+- `Use built-in pet` clears the current custom visual selection without deleting
+  installed packages.
+- `Remove` deletes an installed custom pet package and clears it if it was
+  selected.
+
+<img src="docs/assets/hermes-pets-dashboard-v030-custom-pets-selected.png" alt="Hermes Pets v0.3.0 Custom Pets dashboard view with a selected custom visual package" width="720">
+
+Achievements are intentionally foundational in v0.3.0. Hermes Pets stores the
+local ledger in `achievements.json`, unlocks achievements idempotently, and shows
+compact locked/unlocked status in the dashboard. New unlocks can also emit quiet
+overlay notices such as `Achievement unlocked: Clean Run`; they are informational
+and do not add confetti, sound, modals, or celebration artwork.
+
+<img src="docs/assets/hermes-pets-dashboard-v030-achievements.png" alt="Hermes Pets v0.3.0 Achievements dashboard view with locked and unlocked achievements" width="720">
+
+The dashboard also supports changing notification profile, quiet mode, tray/idle
+toggles, bubble throttle, opt-in voice preview, one harmless voice adapter test,
+and dashboard test events when the overlay bridge is available.
+
+v0.3.0 deliberately does not include a hosted dashboard, hosted gallery,
+drag/drop import, full voice mode, rich celebration system, PyPI publishing, or
+installer publishing.
 
 ## Custom Animated Pets
 
