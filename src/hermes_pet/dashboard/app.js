@@ -95,20 +95,48 @@ function renderSnapshot(snapshot) {
 function renderPet(snapshot) {
   const pet = snapshot.pet;
   const custom = snapshot.custom_pet;
+  const card = $('petCard');
   if (!pet) {
-    $('petCard').innerHTML = empty('No pet has hatched in this state directory yet. Hatch from the CLI, then refresh this console.');
+    card.className = 'pet-card pet-empty-card';
+    card.innerHTML = `
+      <div class="pet-empty">
+        <strong>No active companion yet</strong>
+        <span>Hatch a pet from the CLI, then refresh this local console to bring them online.</span>
+      </div>
+    `;
     return;
   }
-  $('petCard').innerHTML = `
-    <div class="sprite-tile"><img alt="${escapeHtml(pet.species || 'pet')} sprite" src="/overlay/assets/sprites/${encodeURIComponent(pet.species || 'cat')}.png"></div>
-    <div>
-      <h2 class="pet-name">${escapeHtml(pet.name)} <span class="muted">Lv.${escapeHtml(pet.level)}</span></h2>
-      <div class="muted">${escapeHtml(pet.species)} / ${escapeHtml(pet.variant)} / ${escapeHtml(custom?.name || 'built-in sprite')}</div>
-      <div class="metric-row pet-stats">
-        <div class="metric"><strong>${escapeHtml(pet.xp)}</strong><span>XP</span></div>
-        <div class="metric"><strong>${escapeHtml(pet.xp_next)}</strong><span>next level</span></div>
-        <div class="metric"><strong>${escapeHtml(pet.total_interactions || 0)}</strong><span>interactions</span></div>
-        <div class="metric"><strong>${escapeHtml((pet.milestones || []).length)}</strong><span>milestones</span></div>
+  const xp = Number(pet.xp || 0);
+  const xpNext = Number(pet.xp_next || 0);
+  const progress = xpNext > 0 ? Math.max(0, Math.min(100, Math.round((xp / xpNext) * 100))) : 0;
+  const species = pet.species || 'cat';
+  const customLabel = custom?.name ? `Custom pet: ${custom.name}` : 'Built-in sprite';
+  const variantLabel = [pet.species, pet.variant, pet.hat && pet.hat !== 'none' ? `${pet.hat} hat` : ''].filter(Boolean).join(' / ');
+  card.className = 'pet-card pet-hero-card';
+  card.innerHTML = `
+    <div class="sprite-stage" aria-label="${escapeHtml(pet.name || 'Active pet')} sprite">
+      <img alt="${escapeHtml(species)} sprite" src="/overlay/assets/sprites/${encodeURIComponent(species)}.png">
+    </div>
+    <div class="pet-hero-copy">
+      <p class="pet-kicker">Active companion</p>
+      <h2 class="pet-name">${escapeHtml(pet.name)} <span>Lv.${escapeHtml(pet.level)}</span></h2>
+      <div class="pet-meta">
+        <span>${escapeHtml(variantLabel || 'local pet')}</span>
+        <span>${escapeHtml(customLabel)}</span>
+      </div>
+      <div class="xp-block">
+        <div class="xp-row">
+          <span>${escapeHtml(xp)} XP</span>
+          <span>${escapeHtml(xpNext)} next level</span>
+        </div>
+        <div class="xp-progress" role="progressbar" aria-label="XP progress toward next level" aria-valuemin="0" aria-valuemax="${escapeHtml(xpNext)}" aria-valuenow="${escapeHtml(Math.min(xp, xpNext))}">
+          <span style="width:${escapeHtml(progress)}%"></span>
+        </div>
+      </div>
+      <div class="pet-stat-grid">
+        <div><strong>${escapeHtml(pet.total_interactions || 0)}</strong><span>Interactions</span></div>
+        <div><strong>${escapeHtml((pet.milestones || []).length)}</strong><span>Milestones</span></div>
+        <div><strong>${escapeHtml(pet.variant || 'normal')}</strong><span>Variant</span></div>
       </div>
     </div>
   `;
