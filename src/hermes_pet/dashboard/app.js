@@ -144,8 +144,18 @@ function renderPet(snapshot) {
 
 function renderJobs(snapshot) {
   const summary = snapshot.job_summary || {};
-  $('jobSummary').innerHTML = ['total', 'succeeded', 'failed', 'retryable_failures'].map((key) => `
-    <div class="metric"><strong>${escapeHtml(summary[key] || 0)}</strong><span>${escapeHtml(key.replaceAll('_', ' '))}</span></div>
+  const metrics = [
+    ['total', 'Total', 'Recorded jobs', 'neutral'],
+    ['succeeded', 'Succeeded', 'Completed cleanly', 'success'],
+    ['failed', 'Failed', 'Needs review', 'danger'],
+    ['retryable_failures', 'Retryable', 'Safe to rerun', 'warning'],
+  ];
+  $('jobSummary').innerHTML = metrics.map(([key, label, note, tone]) => `
+    <div class="status-metric" data-tone="${escapeHtml(tone)}">
+      <span class="status-metric-label">${escapeHtml(label)}</span>
+      <strong>${escapeHtml(summary[key] || 0)}</strong>
+      <span class="status-metric-note">${escapeHtml(note)}</span>
+    </div>
   `).join('');
   const jobs = snapshot.jobs || [];
   $('jobsList').innerHTML = jobs.length ? jobs.map((job) => `

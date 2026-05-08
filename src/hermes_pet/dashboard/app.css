@@ -514,6 +514,81 @@ input:focus-visible {
   font-size: 12px;
 }
 
+.status-metrics {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: var(--space-3);
+  margin-bottom: var(--space-5);
+}
+
+.status-metric {
+  position: relative;
+  min-width: 0;
+  min-height: 72px;
+  border: 1px solid var(--color-border-default);
+  border-radius: var(--radius-sm);
+  background: var(--color-bg-surface-raised);
+  padding: var(--space-4);
+}
+
+.status-metric::before {
+  content: "";
+  position: absolute;
+  top: var(--space-3);
+  right: var(--space-3);
+  width: 7px;
+  height: 7px;
+  border-radius: var(--radius-pill);
+  background: var(--color-text-muted);
+}
+
+.status-metric[data-tone="success"]::before {
+  background: var(--color-status-success);
+}
+
+.status-metric[data-tone="warning"]::before {
+  background: var(--color-status-warning);
+}
+
+.status-metric[data-tone="danger"]::before {
+  background: var(--color-status-danger);
+}
+
+.status-metric[data-tone="danger"] {
+  border-color: var(--alert-error-border);
+}
+
+.status-metric[data-tone="warning"] {
+  border-color: var(--alert-info-border);
+}
+
+.status-metric-label,
+.status-metric-note {
+  display: block;
+  overflow-wrap: anywhere;
+}
+
+.status-metric-label {
+  color: var(--color-text-secondary);
+  font-size: 12px;
+  font-weight: 650;
+}
+
+.status-metric strong {
+  display: block;
+  margin-top: var(--space-2);
+  color: var(--color-text-primary);
+  font-size: 24px;
+  line-height: 1;
+}
+
+.status-metric-note {
+  margin-top: var(--space-2);
+  color: var(--color-text-muted);
+  font-size: 11px;
+  line-height: 1.25;
+}
+
 .activity-list,
 .pet-list {
   display: grid;
@@ -721,6 +796,10 @@ input[type="checkbox"] {
   .split-layout {
     grid-template-columns: 1fr;
   }
+
+  .status-metrics {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
 }
 
 @media (max-width: 560px) {
@@ -760,6 +839,10 @@ input[type="checkbox"] {
   }
 
   .metric-row {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .status-metrics {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 
