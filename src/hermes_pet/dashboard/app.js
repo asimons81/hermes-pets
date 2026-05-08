@@ -42,6 +42,20 @@ function empty(text) {
   return `<div class="empty">${escapeHtml(text)}</div>`;
 }
 
+function formatTimestamp(value) {
+  if (!value) return '';
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return String(value);
+  return date.toLocaleString([], { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' });
+}
+
+function jobTone(job) {
+  const status = String(job.status || '').toLowerCase();
+  if (status === 'succeeded' || job.exit_code === 0) return 'success';
+  if (status === 'failed' || (job.exit_code !== undefined && job.exit_code !== null && job.exit_code !== 0)) return 'danger';
+  return 'neutral';
+}
+
 function escapeHtml(value) {
   return String(value ?? '').replace(/[&<>"']/g, (char) => ({
     '&': '&amp;',
@@ -158,12 +172,27 @@ function renderJobs(snapshot) {
     </div>
   `).join('');
   const jobs = snapshot.jobs || [];
-  $('jobsList').innerHTML = jobs.length ? jobs.map((job) => `
-    <div class="activity">
-      <strong>${escapeHtml(job.name || job.id || 'job')}</strong>
-      <small>${escapeHtml(job.status || 'unknown')} / exit ${escapeHtml(job.exit_code ?? '-')} / ${escapeHtml(job.duration_text || '')}</small>
-    </div>
-  `).join('') : empty('No wrapped jobs recorded in this state directory.');
+  $('jobsList').innerHTML = jobs.length ? jobs.map((job) => {
+    const tone = jobTone(job);
+    const timestamp = formatTimestamp(job.finished_at || job.started_at || job.created_at);
+    const retryableFailure = tone === 'danger' && job.retryable === true;
+    return `
+      <div class="job-feed-row" data-tone="${escapeHtml(tone)}">
+        <div class="job-feed-main">
+          <strong>${escapeHtml(job.name || job.id || 'job')}</strong>
+          <div class="job-feed-meta">
+            <span>Status: ${escapeHtml(job.status || 'unknown')}</span>
+            <span>Exit: ${escapeHtml(job.exit_code ?? '-')}</span>
+            <span>Duration: ${escapeHtml(job.duration_text || '-')}</span>
+          </div>
+        </div>
+        <div class="job-feed-side">
+          ${timestamp ? `<span class="feed-time">${escapeHtml(timestamp)}</span>` : ''}
+          ${retryableFailure ? '<span class="retry-chip">Retryable</span>' : ''}
+        </div>
+      </div>
+    `;
+  }).join('') : empty('No wrapped jobs recorded yet. Run commands with hermes-pet wrap to build a local signal history.');
 }
 
 function renderEvents(snapshot) {

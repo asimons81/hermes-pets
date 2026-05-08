@@ -595,6 +595,78 @@ input:focus-visible {
   gap: var(--space-3);
 }
 
+.job-feed-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: var(--space-5);
+  align-items: center;
+  min-width: 0;
+  border: 1px solid var(--color-border-default);
+  border-left-width: 3px;
+  border-radius: var(--radius-sm);
+  background: var(--color-bg-row);
+  padding: var(--space-4);
+}
+
+.job-feed-row[data-tone="success"] {
+  border-left-color: var(--color-status-success);
+}
+
+.job-feed-row[data-tone="danger"] {
+  border-left-color: var(--color-status-danger);
+}
+
+.job-feed-row[data-tone="neutral"] {
+  border-left-color: var(--color-text-muted);
+}
+
+.job-feed-main {
+  min-width: 0;
+}
+
+.job-feed-main strong {
+  display: block;
+  color: var(--color-text-primary);
+  overflow-wrap: anywhere;
+}
+
+.job-feed-meta,
+.job-feed-side {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+  align-items: center;
+}
+
+.job-feed-meta {
+  margin-top: var(--space-2);
+}
+
+.job-feed-meta span,
+.feed-time,
+.retry-chip {
+  color: var(--color-text-muted);
+  font-size: 12px;
+  line-height: 1.25;
+}
+
+.job-feed-side {
+  justify-content: flex-end;
+}
+
+.feed-time,
+.retry-chip {
+  border: 1px solid var(--color-border-default);
+  border-radius: var(--radius-pill);
+  background: var(--color-bg-surface-subtle);
+  padding: var(--space-1) var(--space-3);
+}
+
+.retry-chip {
+  border-color: var(--color-status-warning);
+  color: var(--color-status-warning);
+}
+
 .activity,
 .pet-row,
 .achievement {
@@ -848,6 +920,14 @@ input[type="checkbox"] {
 
   .pet-stat-grid {
     grid-template-columns: 1fr;
+  }
+
+  .job-feed-row {
+    grid-template-columns: 1fr;
+  }
+
+  .job-feed-side {
+    justify-content: flex-start;
   }
 
   .nav-stack {
