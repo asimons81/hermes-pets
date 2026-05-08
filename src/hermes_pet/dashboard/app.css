@@ -215,6 +215,9 @@ input {
 
 .workspace {
   min-width: 0;
+  width: 100%;
+  max-width: 1500px;
+  margin: 0 auto;
   padding: var(--space-8);
 }
 
@@ -227,6 +230,10 @@ input {
   margin-bottom: var(--space-7);
   border-bottom: 1px solid var(--color-border-subtle);
   padding-bottom: var(--space-7);
+}
+
+.topbar > div:first-child {
+  min-width: 0;
 }
 
 .topbar h1 {
@@ -333,6 +340,13 @@ input:focus-visible {
   gap: var(--space-5);
   align-items: baseline;
   margin-bottom: var(--space-5);
+}
+
+.panel-head small {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .pet-card {
@@ -607,7 +621,7 @@ input:focus-visible {
 
 .job-feed-row {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) auto;
+  grid-template-columns: minmax(0, 1fr) minmax(120px, auto);
   gap: var(--space-5);
   align-items: center;
   min-width: 0;
@@ -886,6 +900,42 @@ input[type="checkbox"] {
   padding: var(--space-4);
 }
 
+@media (min-width: 1180px) {
+  .pet-panel {
+    grid-column: 1 / -1;
+  }
+}
+
+@media (max-width: 1080px) {
+  .shell {
+    grid-template-columns: 232px minmax(0, 1fr);
+  }
+
+  .rail,
+  .workspace {
+    padding: var(--space-7);
+  }
+
+  .overview-grid,
+  .settings-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .pet-card {
+    grid-template-columns: 128px minmax(0, 1fr);
+  }
+
+  .sprite-stage {
+    width: 128px;
+    height: 128px;
+  }
+
+  .sprite-stage img {
+    max-width: 102px;
+    max-height: 102px;
+  }
+}
+
 @media (max-width: 860px) {
   .shell {
     grid-template-columns: 1fr;
@@ -897,6 +947,7 @@ input[type="checkbox"] {
     z-index: 2;
     border-right: 0;
     border-bottom: 1px solid var(--color-border-default);
+    gap: var(--space-6);
   }
 
   .nav-stack {
@@ -929,6 +980,10 @@ input[type="checkbox"] {
   .pet-card,
   .pet-row {
     grid-template-columns: 1fr;
+  }
+
+  .pet-card {
+    justify-items: start;
   }
 
   .sprite-stage {
