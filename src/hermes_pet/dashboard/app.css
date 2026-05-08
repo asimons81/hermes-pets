@@ -82,17 +82,19 @@ input {
 
 .shell {
   display: grid;
-  grid-template-columns: 244px minmax(0, 1fr);
+  grid-template-columns: 268px minmax(0, 1fr);
   min-height: 100vh;
 }
 
 .rail {
   border-right: 1px solid var(--color-border-default);
-  background: color-mix(in srgb, var(--color-bg-rail) 94%, transparent);
-  padding: 18px;
+  background:
+    linear-gradient(180deg, rgba(102, 213, 207, 0.045), transparent 28%),
+    var(--color-bg-rail);
+  padding: var(--space-8);
   display: flex;
   flex-direction: column;
-  gap: var(--space-9);
+  gap: var(--space-8);
 }
 
 .mark {
@@ -100,14 +102,21 @@ input {
   gap: var(--space-5);
   align-items: center;
   min-height: 48px;
+  padding-bottom: var(--space-3);
 }
 
 .mark-dot {
+  display: grid;
+  place-items: center;
   width: 34px;
   height: 34px;
   border-radius: var(--radius-md);
   background: linear-gradient(135deg, var(--color-accent-primary), var(--color-accent-secondary));
   box-shadow: var(--shadow-brand);
+  color: var(--control-text-on-accent);
+  font-size: 15px;
+  font-weight: 800;
+  line-height: 1;
 }
 
 .mark strong,
@@ -125,19 +134,42 @@ input {
   line-height: 1.35;
 }
 
-nav {
+.local-seal {
+  border: 1px solid var(--color-border-subtle);
+  border-radius: var(--radius-md);
+  background: rgba(31, 36, 39, 0.55);
+  padding: var(--space-5);
+}
+
+.local-seal span {
+  display: block;
+  color: var(--color-text-secondary);
+  font-size: 13px;
+  font-weight: 650;
+}
+
+.local-seal small {
+  display: block;
+  margin-top: var(--space-1);
+  color: var(--color-text-muted);
+  font-size: 12px;
+  line-height: 1.35;
+}
+
+.nav-stack {
   display: grid;
   gap: var(--space-2);
 }
 
 .nav-item {
-  min-height: 38px;
+  position: relative;
+  min-height: 40px;
   text-align: left;
   color: var(--color-text-secondary);
   border: 1px solid transparent;
   background: transparent;
   border-radius: var(--radius-sm);
-  padding: 0 12px;
+  padding: 0 var(--space-5);
   cursor: pointer;
 }
 
@@ -148,6 +180,17 @@ nav {
   border-color: var(--color-border-strong);
 }
 
+.nav-item.active::before {
+  content: "";
+  position: absolute;
+  top: 10px;
+  bottom: 10px;
+  left: 6px;
+  width: 2px;
+  border-radius: var(--radius-pill);
+  background: var(--color-accent-primary);
+}
+
 .rail-status {
   margin-top: auto;
   display: flex;
@@ -155,6 +198,8 @@ nav {
   gap: var(--space-3);
   color: var(--color-text-muted);
   font-size: 13px;
+  border-top: 1px solid var(--color-border-subtle);
+  padding-top: var(--space-6);
 }
 
 .status-dot {
@@ -178,7 +223,10 @@ nav {
   align-items: center;
   justify-content: space-between;
   gap: var(--space-7);
+  min-height: 72px;
   margin-bottom: var(--space-7);
+  border-bottom: 1px solid var(--color-border-subtle);
+  padding-bottom: var(--space-7);
 }
 
 .topbar h1 {
@@ -192,9 +240,20 @@ nav {
   text-transform: uppercase;
 }
 
+.view-subtitle {
+  margin: var(--space-1) 0 0;
+  max-width: 620px;
+  color: var(--color-text-muted);
+  font-size: 13px;
+  line-height: 1.45;
+}
+
 .top-actions {
   display: flex;
   gap: var(--space-3);
+  align-items: center;
+  flex-wrap: wrap;
+  justify-content: flex-end;
 }
 
 .action-button {
@@ -206,6 +265,11 @@ nav {
   background: var(--control-bg);
   padding: 0 12px;
   cursor: pointer;
+}
+
+.action-button:first-child {
+  border-color: var(--primary-command-border);
+  background: var(--primary-command-bg);
 }
 
 .action-button:hover,
@@ -521,7 +585,7 @@ input[type="checkbox"] {
     border-bottom: 1px solid var(--color-border-default);
   }
 
-  nav {
+  .nav-stack {
     grid-template-columns: repeat(5, minmax(0, 1fr));
   }
 
@@ -567,7 +631,7 @@ input[type="checkbox"] {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 
-  nav {
+  .nav-stack {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 }

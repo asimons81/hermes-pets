@@ -54,18 +54,27 @@ function escapeHtml(value) {
 
 function setView(name) {
   document.querySelectorAll('.nav-item').forEach((button) => {
-    button.classList.toggle('active', button.dataset.view === name);
+    const active = button.dataset.view === name;
+    button.classList.toggle('active', active);
+    if (active) {
+      button.setAttribute('aria-current', 'page');
+    } else {
+      button.removeAttribute('aria-current');
+    }
   });
   document.querySelectorAll('.view').forEach((view) => {
     view.classList.toggle('active', view.id === name);
   });
-  $('viewTitle').textContent = {
-    overview: 'Overview',
-    custom: 'Custom Pets',
-    prefs: 'Preferences',
-    voice: 'Voice Preview',
-    achievements: 'Achievements',
-  }[name] || 'Overview';
+  const viewMeta = {
+    overview: ['Overview', 'Your active pet, recent signals, and local console health.'],
+    custom: ['Custom Pets', 'Installed local companions and typed-path package import.'],
+    prefs: ['Preferences', 'Notification posture, quiet mode, and local bubble behavior.'],
+    voice: ['Voice Preview', 'Opt-in adapter plumbing for one explicit local test.'],
+    achievements: ['Achievements', 'A compact local ledger of foundational unlocks.'],
+  };
+  const [title, subtitle] = viewMeta[name] || viewMeta.overview;
+  $('viewTitle').textContent = title;
+  $('viewSubtitle').textContent = subtitle;
 }
 
 function renderSnapshot(snapshot) {
