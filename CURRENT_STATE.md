@@ -1,6 +1,6 @@
 # Hermes Pets Current State
 
-Snapshot date: 2026-05-07
+Snapshot date: 2026-05-08
 
 ## What Works
 
@@ -16,7 +16,7 @@ Snapshot date: 2026-05-07
 - `hermes-pet message` emits external message notifications with source, sender, urgency, and optional open-command metadata.
 - Quiet, silent, mute, and preference controls exist.
 - Named notification profiles exist for normal, focus, pairing, demo, and silent workflows.
-- `hermes-pet dashboard` serves a polished localhost-only, token-protected dashboard preview on port `17474` by default.
+- `hermes-pet dashboard` serves a polished localhost-only, token-protected dashboard on port `17474` by default.
 - Dashboard APIs expose state snapshots, notification prefs, custom pet management, voice preview controls, achievements, and a test overlay event.
 - Dashboard static assets are packaged with wheel/sdist artifacts and work from editable installs.
 - v0.3.0 dashboard QA screenshots and evidence are recorded in `docs/assets/hermes-pets-dashboard-v030-overview.png` and `docs/dashboard-v030-qa.md`.
@@ -35,6 +35,11 @@ Snapshot date: 2026-05-07
   package artifact verification, packaged overlay verification, temp-state CLI
   smoke, live overlay verification, and fresh install smoke against the current
   workspace target.
+- v0.3.0 release readiness passed on WSL/Windows on 2026-05-08: compileall,
+  pytest, JS syntax checks, renderer smoke, shell syntax checks, sprite manifest
+  validation, temp-state and fresh-install CLI smokes, packaged overlay
+  verification, wheel/sdist artifact inspection, live overlay verification,
+  local install smoke, and `hermes-pet doctor`.
 - A repo-local Codex skill exists at `.codex/skills/hermes-pet-hatch/SKILL.md` for creating Hermes-compatible custom pet packages.
 - `hermes-pet doctor` checks CLI, bridge, overlay, state, prefs, and job history.
 - `hermes-pet doctor --strict` returns non-zero when any doctor check warns.
@@ -150,10 +155,8 @@ hpbrief
 
 ## Next Recommended Improvements
 
-- Use the `v0.2.0` release as the baseline for the next platform and packaging
+- Use the `v0.3.0` release as the baseline for the next platform and packaging
   milestone; keep any PyPI upload or installer work as an explicit future task.
-- Complete owner review of the local v0.3.0 dashboard preview before any push,
-  tag, PyPI upload, installer work, or release creation.
 - Expand automated CLI tests around parser behavior, wrapped command execution, and brief formatting.
 - Add deeper live overlay checks for drag ergonomics, always-on-top behavior, and multi-monitor/DPI setups.
 - Add richer custom pet preview controls such as playback speed and side-by-side state comparison.

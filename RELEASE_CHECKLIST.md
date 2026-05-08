@@ -107,6 +107,48 @@ scripts/verify-live-overlay.sh
   the next-version recommendation.
 - Do not bump `pyproject.toml` during Phase 5 by default.
 
+## v0.3.0 Dashboard Release Closeout
+
+- Confirm `hermes-pet dashboard` binds to localhost only, prints a private
+  token URL, and rejects dashboard/API requests without the token.
+- Confirm dashboard assets are present in editable installs, wheel artifacts,
+  and sdist artifacts.
+- Confirm voice preview is off by default, opt-in only, adapter-command based,
+  and documented as preview plumbing.
+- Confirm achievements remain foundational only: compact dashboard display,
+  idempotent `achievements.json`, and simple bounded overlay event handling.
+- Confirm custom pet dashboard import remains typed local path only. No drag/drop
+  import, hosted gallery, upload flow, or remote dashboard scope.
+- Capture dashboard QA screenshots for overview, change pet, custom pets,
+  preferences, voice, achievements, populated state, empty state, and error
+  state where practical. Check desktop and narrow/mobile viewports for overlap
+  and clipped text.
+- Run the v0.3.0 local readiness stack before release:
+
+```bash
+python3 -m compileall -q src/hermes_pet
+uv run pytest
+node --check overlay/src/renderer.js
+node --check overlay/src/main.js
+node --check overlay/src/main.windows.js
+node --check overlay/src/preload.js
+node --check src/hermes_pet/dashboard/app.js
+node scripts/smoke-renderer.js
+bash -n shell-helpers/hermes-pet.bash scripts/smoke-hermes-pet.sh scripts/smoke-github-install.sh scripts/verify-packaged-overlay.sh scripts/verify-live-overlay.sh
+python3 scripts/validate-sprite-manifest.py
+scripts/smoke-hermes-pet.sh --temp-state
+scripts/smoke-hermes-pet.sh --fresh-install
+scripts/verify-packaged-overlay.sh
+python3 scripts/verify-package-artifacts.py
+scripts/verify-live-overlay.sh
+HERMES_PET_INSTALL_TARGET=/home/tony/projects/hermes-pet scripts/smoke-github-install.sh
+hermes-pet doctor
+```
+
+- For v0.3.0, GitHub release/tagging is allowed only as an explicit release
+  operation after this stack passes and `git status --short` is clean. PyPI
+  upload and installer publishing remain out of scope.
+
 ## Installability
 
 - Confirm `pyproject.toml` exposes `hermes-pet` and `hermes-pet-bridge`.

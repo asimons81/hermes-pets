@@ -37,6 +37,7 @@ from datetime import datetime, timedelta, timezone
 from pathlib import Path
 from typing import Callable
 
+from hermes_pet.achievements import sync_achievements, unlock_achievement
 from hermes_pet.custom_pets import (
     current_custom_pet,
     custom_pet_event_payload,
@@ -49,6 +50,15 @@ from hermes_pet.custom_pets import (
     render_custom_pet_preview_html,
     set_current_custom_pet,
     validate_pet_name,
+)
+from hermes_pet.voice import (
+    load_voice_prefs,
+    run_voice_for_event,
+    run_voice_test,
+    save_voice_prefs,
+    set_voice_command,
+    set_voice_enabled,
+    voice_status,
 )
 from hermes_pet.engine import (
     Pet,
@@ -221,6 +231,7 @@ def _pet_mutation(action: str, verb: str, fn: Callable[[Pet], list[str]]) -> int
     before_xp = pet.xp
     milestones = fn(pet)
     _save_pet(pet)
+    _notify_achievement_unlocks(sync_achievements(_state_dir()))
     delta_xp = pet.xp - before_xp
     print(f"{action} {verb} {pet.name}! +{delta_xp} XP")
     for milestone in milestones:
@@ -805,6 +816,32 @@ def _notify_custom_pet_changed(payload: dict[str, object] | None) -> bool:
     )
 
 
+def _notify_achievement_unlocks(items: list[dict[str, object]]) -> None:
+    if not items:
+        return
+    bridge_mod = importlib.import_module("hermes_pet.bridge")
+    port = _resolve_bridge_port(bridge_mod)
+    host = os.environ.get("HERMES_PET_HOST") or "127.0.0.1"
+    bridge_url = os.environ.get("HERMES_PET_WS_URL")
+    for item in items:
+        bridge_mod.send_event_to_bridge(
+            {"type": "achievement_unlocked", "achievement": item},
+            port=port,
+            host=host,
+            bridge_url=bridge_url,
+        )
+
+
+def _unlock_and_notify_achievement(achievement_id: str, *, source: str) -> None:
+    try:
+        item = unlock_achievement(achievement_id, base_dir=_state_dir(), source=source)
+    except Exception as exc:
+        print(f"⚠️ Could not update achievements: {exc}", file=sys.stderr)
+        return
+    if item:
+        _notify_achievement_unlocks([item])
+
+
 def _cmd_custom_pet_list(_: argparse.Namespace) -> int:
     pets = list_custom_pets(_state_dir())
     if not pets:
@@ -899,6 +936,7 @@ def _cmd_custom_pet_import(args: argparse.Namespace) -> int:
         dest = import_package(args.path, name=name, base_dir=_state_dir())
     except Exception as exc:
         raise PetCLIError(f"Custom pet import failed: {exc}") from exc
+    _unlock_and_notify_achievement("first_custom_pet_imported", source="custom-pet-import")
     print(f"✅ Imported custom pet {name} to {dest}")
     return 0
 
@@ -909,6 +947,7 @@ def _cmd_custom_pet_use(args: argparse.Namespace) -> int:
     except Exception as exc:
         raise PetCLIError(f"Could not select custom pet: {exc}") from exc
     _notify_custom_pet_changed(payload)
+    _unlock_and_notify_achievement("first_custom_pet_selected", source="custom-pet-use")
     print(f"✅ Using custom pet {payload['name']}")
     return 0
 
@@ -955,6 +994,13 @@ def _send_pet_event(event_type: str, text: str, *, required: bool, **extra: obje
     port = _resolve_bridge_port(bridge_mod)
     host = os.environ.get("HERMES_PET_HOST") or "127.0.0.1"
     bridge_url = os.environ.get("HERMES_PET_WS_URL")
+
+    try:
+        voice_result = run_voice_for_event(event, base_dir=_state_dir())
+        if not voice_result.get("ok") and not voice_result.get("skipped"):
+            print(f"⚠️ Voice preview failed: {voice_result.get('reason')}", file=sys.stderr)
+    except Exception:
+        print("⚠️ Voice preview failed: unexpected-error", file=sys.stderr)
 
     if not bridge_mod.send_event_to_bridge(event, port=port, host=host, bridge_url=bridge_url):
         if required:
@@ -1120,6 +1166,9 @@ def _cmd_quiet(args: argparse.Namespace) -> int:
     except ValueError as exc:
         raise PetCLIError(str(exc)) from exc
     _notify_prefs_changed(prefs)
+    _unlock_and_notify_achievement("prefs_saved", source="prefs-quiet")
+    if prefs.get("quiet_mode") in {"important", "silent"}:
+        _unlock_and_notify_achievement("quiet_mode_enabled", source="prefs-quiet")
     print(f"🔕 Quiet mode: {prefs['quiet_mode']}")
     return 0
 
@@ -1130,6 +1179,7 @@ def _cmd_mute(args: argparse.Namespace) -> int:
     except ValueError as exc:
         raise PetCLIError(str(exc)) from exc
     _notify_prefs_changed(prefs)
+    _unlock_and_notify_achievement("prefs_saved", source="prefs-mute")
     print(f"🔇 Muted non-urgent bubbles until {prefs['muted_until']}")
     return 0
 
@@ -1159,6 +1209,9 @@ def _cmd_profile(args: argparse.Namespace) -> int:
     except ValueError as exc:
         raise PetCLIError(str(exc)) from exc
     _notify_prefs_changed(prefs)
+    _unlock_and_notify_achievement("prefs_saved", source="prefs-profile")
+    if prefs.get("quiet_mode") in {"important", "silent"}:
+        _unlock_and_notify_achievement("quiet_mode_enabled", source="prefs-profile")
     print(f"✅ Notification profile: {prefs['notification_profile']}")
     return 0
 
@@ -1205,11 +1258,69 @@ def _cmd_prefs(args: argparse.Namespace) -> int:
         prefs[key] = _coerce_pref_value(key, str(args.value))
         prefs = save_prefs(prefs, _state_dir())
         _notify_prefs_changed(prefs)
+        _unlock_and_notify_achievement("prefs_saved", source="prefs-set")
+        if prefs.get("quiet_mode") in {"important", "silent"}:
+            _unlock_and_notify_achievement("quiet_mode_enabled", source="prefs-set")
         print(f"✅ Set {key}={_format_pref_value(prefs.get(key))}")
         return 0
 
     _print_prefs(load_prefs(_state_dir()))
     return 0
+
+
+def _print_voice_status(payload: dict[str, object]) -> None:
+    allowlist = payload.get("allowlist", [])
+    allowlist_text = ", ".join(str(item) for item in allowlist) if isinstance(allowlist, list) else str(allowlist)
+    print("Voice preview")
+    print(f"enabled:        {_format_pref_value(payload.get('enabled'))}")
+    print(f"command:        {_format_pref_value(payload.get('command'))}")
+    print(f"command_source: {_format_pref_value(payload.get('command_source'))}")
+    print(f"allowlist:      {allowlist_text}")
+
+
+def _cmd_voice(args: argparse.Namespace) -> int:
+    action = str(getattr(args, "voice_action", "") or "status")
+    if action == "on":
+        prefs = set_voice_enabled(True, _state_dir())
+        _unlock_and_notify_achievement("voice_preview_enabled", source="voice-on")
+        print("Voice preview enabled.")
+        _print_voice_status({**voice_status(_state_dir()), **prefs})
+        return 0
+    if action == "off":
+        prefs = set_voice_enabled(False, _state_dir())
+        print("Voice preview disabled.")
+        _print_voice_status({**voice_status(_state_dir()), **prefs})
+        return 0
+    if action == "set-command":
+        prefs = set_voice_command(" ".join(getattr(args, "command", []) or []), _state_dir())
+        print("Voice adapter command saved.")
+        _print_voice_status({**voice_status(_state_dir()), **prefs})
+        return 0
+    if action == "test":
+        text = " ".join(getattr(args, "text", []) or []) or "Hermes Pets voice preview test."
+        result = run_voice_test(text, _state_dir())
+        _unlock_and_notify_achievement("voice_test_ran", source="voice-test")
+        print("Voice test result: " + ("ok" if result.get("ok") else "failed"))
+        if result.get("reason"):
+            print(f"reason: {result['reason']}")
+        return 0 if result.get("ok") else 1
+    _print_voice_status(voice_status(_state_dir()))
+    return 0
+
+
+def _cmd_dashboard(args: argparse.Namespace) -> int:
+    from hermes_pet.dashboard import DashboardError, serve_dashboard
+
+    requested_port = getattr(args, "port", 17474)
+    port = 17474 if requested_port is None else int(requested_port)
+    try:
+        return serve_dashboard(
+            host=str(getattr(args, "host", "127.0.0.1") or "127.0.0.1"),
+            port=port,
+            no_open=bool(getattr(args, "no_open", False)),
+        )
+    except DashboardError as exc:
+        raise PetCLIError(str(exc)) from exc
 
 
 def _clean_command_remainder(command: list[str]) -> list[str]:
@@ -1345,6 +1456,14 @@ def _record_job(
         append_job(job, base_dir=_state_dir())
     except Exception as exc:
         print(f"⚠️ Could not save job history: {exc}", file=sys.stderr)
+        return
+
+    if status == "succeeded" or int(exit_code) == 0:
+        _unlock_and_notify_achievement("first_wrapped_job_completed", source="job-history")
+    else:
+        _unlock_and_notify_achievement("first_failed_job_recorded", source="job-history")
+        if not command_redacted:
+            _unlock_and_notify_achievement("first_retryable_failure", source="job-history")
 
 
 def _command_display(command: object) -> str:
@@ -2077,6 +2196,12 @@ def _build_parser() -> argparse.ArgumentParser:
     )
     doctor.set_defaults(func=_cmd_doctor)
 
+    dashboard = subparsers.add_parser("dashboard", help="Serve the token-protected local dashboard.")
+    dashboard.add_argument("--host", default="127.0.0.1", help="Local bind host. Must be localhost.")
+    dashboard.add_argument("--port", type=int, default=17474, help="Local dashboard port.")
+    dashboard.add_argument("--no-open", action="store_true", help="Print the dashboard URL without opening a browser.")
+    dashboard.set_defaults(func=_cmd_dashboard)
+
     custom = subparsers.add_parser("custom", help="Set a custom PNG sprite.")
     custom.add_argument("path", help="Path to the PNG to copy into the pet state directory.")
     custom.set_defaults(func=_cmd_custom)
@@ -2214,6 +2339,22 @@ def _build_parser() -> argparse.ArgumentParser:
     prefs.set_defaults(func=_cmd_prefs)
     prefs_set.set_defaults(func=_cmd_prefs, prefs_action="set")
     prefs_profile.set_defaults(func=_cmd_prefs, prefs_action="profile")
+
+    voice = subparsers.add_parser("voice", help="Manage opt-in voice preview mode.")
+    voice_sub = voice.add_subparsers(dest="voice_action")
+    voice_status_parser = voice_sub.add_parser("status", help="Show voice preview status.")
+    voice_status_parser.set_defaults(func=_cmd_voice, voice_action="status")
+    voice_on = voice_sub.add_parser("on", help="Enable voice preview.")
+    voice_on.set_defaults(func=_cmd_voice, voice_action="on")
+    voice_off = voice_sub.add_parser("off", help="Disable voice preview.")
+    voice_off.set_defaults(func=_cmd_voice, voice_action="off")
+    voice_command = voice_sub.add_parser("set-command", help="Save the adapter command used for voice preview.")
+    voice_command.add_argument("command", nargs=argparse.REMAINDER, help="Command to run; event text is sent on stdin.")
+    voice_command.set_defaults(func=_cmd_voice, voice_action="set-command")
+    voice_test = voice_sub.add_parser("test", help="Run one explicit voice preview test.")
+    voice_test.add_argument("text", nargs="*", help="Text to send to the adapter.")
+    voice_test.set_defaults(func=_cmd_voice, voice_action="test")
+    voice.set_defaults(func=_cmd_voice, voice_action="status")
 
     jobs = subparsers.add_parser("jobs", help="Show recent wrapped job history.")
     jobs.add_argument("--failed", action="store_true", help="Show only failed jobs.")

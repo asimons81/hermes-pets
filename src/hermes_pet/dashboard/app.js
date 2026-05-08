@@ -1,5 +1,5 @@
 const token = new URLSearchParams(window.location.search).get('token') || readCookie('hermes_pet_dashboard_token');
-const state = { snapshot: null, prefs: null, voice: null };
+const state = { snapshot: null, prefs: null, voice: null, species: [], speciesCurrent: null, speciesLoaded: false };
 
 function readCookie(name) {
   return document.cookie
@@ -60,10 +60,14 @@ function stateCard(tone, title, body) {
 function renderLoadingState() {
   $('petCard').className = 'pet-card pet-empty-card';
   $('petCard').innerHTML = stateCard('loading', 'Loading local pet state', 'Reading the token-protected dashboard snapshot from this machine.');
+  $('speciesCount').textContent = '';
+  $('speciesList').innerHTML = stateCard('loading', 'Loading built-in species', 'Reading the local pet catalog.');
   $('jobSummary').innerHTML = '';
   $('jobsList').innerHTML = stateCard('loading', 'Loading recent jobs', 'Wrapped command history will appear here when the state snapshot arrives.');
   $('eventsList').innerHTML = stateCard('loading', 'Loading event log', 'Recent local companion signals will appear here shortly.');
   $('achievementPreview').innerHTML = stateCard('loading', 'Loading achievements', 'Checking the compact local unlock ledger.');
+  $('achievementProgress').innerHTML = achievementProgressHeader(0, 0, 0);
+  $('achievementGrid').innerHTML = stateCard('loading', 'Loading achievement ledger', 'Badge groups will appear when the state snapshot arrives.');
 }
 
 function renderApiError(error) {
@@ -74,10 +78,14 @@ function renderApiError(error) {
     : 'The local server did not return a usable state snapshot. Check the dashboard process, then refresh.';
   $('petCard').className = 'pet-card pet-empty-card';
   $('petCard').innerHTML = stateCard('error', title, body);
+  $('speciesCount').textContent = '';
+  $('speciesList').innerHTML = stateCard('error', 'Species catalog paused', body);
   $('jobSummary').innerHTML = '';
   $('jobsList').innerHTML = stateCard('error', 'Signal feed paused', body);
   $('eventsList').innerHTML = stateCard('error', 'Event log paused', body);
   $('achievementPreview').innerHTML = stateCard('error', 'Achievement ledger paused', body);
+  $('achievementProgress').innerHTML = achievementProgressHeader(0, 0, 0);
+  $('achievementGrid').innerHTML = stateCard('error', 'Achievement ledger paused', body);
 }
 
 function formatTimestamp(value) {
@@ -85,6 +93,13 @@ function formatTimestamp(value) {
   const date = new Date(value);
   if (Number.isNaN(date.getTime())) return String(value);
   return date.toLocaleString([], { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' });
+}
+
+function formatDate(value) {
+  if (!value) return '';
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return String(value);
+  return date.toLocaleDateString([], { month: 'short', day: 'numeric', year: 'numeric' });
 }
 
 function jobTone(job) {
@@ -119,7 +134,8 @@ function setView(name) {
   });
   const viewMeta = {
     overview: ['Overview', 'Your active pet, recent signals, and local console health.'],
-    custom: ['Custom Pets', 'Installed local companions and typed-path package import.'],
+    change: ['Change Pet', 'Choose a built-in companion or hatch a fresh random pet.'],
+    custom: ['Custom Pets', 'Installed visual packages and typed-path package import.'],
     prefs: ['Preferences', 'Notification posture, quiet mode, and local bubble behavior.'],
     voice: ['Voice Preview', 'Opt-in adapter plumbing for one explicit local test.'],
     achievements: ['Achievements', 'A compact local ledger of foundational unlocks.'],
@@ -138,6 +154,7 @@ function renderSnapshot(snapshot) {
   dot.classList.toggle('ok', !!snapshot.bridge?.available);
   $('bridgeText').textContent = snapshot.bridge?.available ? 'Bridge online' : 'Bridge offline - local state still available';
   renderPet(snapshot);
+  renderSpecies();
   renderJobs(snapshot);
   renderEvents(snapshot);
   renderAchievements(snapshot);
@@ -155,7 +172,7 @@ function renderPet(snapshot) {
     card.innerHTML = `
       <div class="pet-empty">
         <strong>No active companion yet</strong>
-        <span>Hatch a pet from the CLI, then refresh this local console to bring them online.</span>
+        <span>No built-in or custom pet is active. Choose a built-in species from Change Pet, hatch a random pet, or select an installed custom pet.</span>
       </div>
     `;
     return;
@@ -164,7 +181,8 @@ function renderPet(snapshot) {
   const xpNext = Number(pet.xp_next || 0);
   const progress = xpNext > 0 ? Math.max(0, Math.min(100, Math.round((xp / xpNext) * 100))) : 0;
   const species = pet.species || 'cat';
-  const customLabel = custom?.name ? `Custom pet: ${custom.name}` : 'Built-in sprite';
+  const customLabel = custom?.name ? `Custom visual: ${custom.name}` : 'Built-in visual';
+  const visualState = custom?.name ? 'Custom visual active' : 'Built-in visual active';
   const variantLabel = [pet.species, pet.variant, pet.hat && pet.hat !== 'none' ? `${pet.hat} hat` : ''].filter(Boolean).join(' / ');
   card.className = 'pet-card pet-hero-card';
   card.innerHTML = `
@@ -172,7 +190,7 @@ function renderPet(snapshot) {
       <img alt="${escapeHtml(species)} sprite" src="/overlay/assets/sprites/${encodeURIComponent(species)}.png">
     </div>
     <div class="pet-hero-copy">
-      <p class="pet-kicker">Active companion</p>
+      <p class="pet-kicker">Active companion / ${escapeHtml(visualState)}</p>
       <h2 class="pet-name">${escapeHtml(pet.name)} <span>Lv.${escapeHtml(pet.level)}</span></h2>
       <div class="pet-meta">
         <span>${escapeHtml(variantLabel || 'local pet')}</span>
@@ -194,6 +212,51 @@ function renderPet(snapshot) {
       </div>
     </div>
   `;
+}
+
+function renderSpecies() {
+  const list = $('speciesList');
+  const species = state.species || [];
+  const currentName = (state.snapshot?.pet?.species || state.speciesCurrent?.species || state.speciesCurrent?.name || '').toLowerCase();
+  $('speciesCount').textContent = species.length ? `${species.length} species` : '';
+  if (!state.speciesLoaded) {
+    list.innerHTML = stateCard('loading', 'Loading built-in species', 'Reading the local pet catalog.');
+    return;
+  }
+  if (!species.length) {
+    list.innerHTML = empty('No built-in species were returned by the local catalog.');
+    return;
+  }
+  list.innerHTML = species.map((item) => {
+    const name = item.name || 'unknown';
+    const isCurrent = currentName && String(name).toLowerCase() === currentName;
+    return `
+      <article class="species-option ${isCurrent ? 'current' : ''}">
+        <div class="species-main">
+          <strong>${escapeHtml(name)}${isCurrent ? ' / Current' : ''}</strong>
+          <small>${escapeHtml(item.rarity || 'standard')} rarity / ${escapeHtml(item.personality || 'companion')} personality</small>
+          <span>Favorite tool: ${escapeHtml(item.favorite_tool || 'any local command')}</span>
+        </div>
+        <button class="${isCurrent ? 'secondary' : 'primary'}" type="button" data-adopt-species="${escapeHtml(name)}">
+          ${isCurrent ? 'Restart' : 'Adopt'}
+        </button>
+      </article>
+    `;
+  }).join('');
+}
+
+async function loadSpecies() {
+  try {
+    const result = await api('/api/species');
+    state.species = result.species || [];
+    state.speciesCurrent = result.current || null;
+    state.speciesLoaded = true;
+    renderSpecies();
+  } catch (error) {
+    state.speciesLoaded = true;
+    $('speciesCount').textContent = '';
+    $('speciesList').innerHTML = stateCard('error', 'Species catalog unavailable', error.message);
+  }
 }
 
 function renderJobs(snapshot) {
@@ -247,37 +310,131 @@ function renderEvents(snapshot) {
 
 function renderAchievements(snapshot) {
   const achievements = snapshot.achievements || { items: [] };
-  $('achievementCount').textContent = `${achievements.unlocked_count || 0}/${achievements.total_count || 0} unlocked`;
-  const preview = achievements.items.slice(0, 3);
+  const items = sortAchievements(achievements.items || []);
+  const unlockedCount = Number(achievements.unlocked_count ?? items.filter((item) => item.unlocked).length);
+  const totalCount = Number(achievements.total_count ?? items.length);
+  const progress = totalCount > 0 ? Math.round((unlockedCount / totalCount) * 100) : 0;
+  $('achievementCount').textContent = `${unlockedCount}/${totalCount} unlocked`;
+  $('achievementProgress').innerHTML = achievementProgressHeader(unlockedCount, totalCount, progress);
+  const preview = selectAchievementPreview(items);
   $('achievementPreview').innerHTML = preview.length ? preview.map(achievementCard).join('') : empty('Achievement ledger is ready.');
-  $('achievementGrid').innerHTML = achievements.items.length ? achievements.items.map(achievementCard).join('') : empty('Achievement definitions are available once local state appears.');
+  $('achievementGrid').innerHTML = items.length ? achievementCategoryGroups(items) : empty('Achievement definitions are available once local state appears.');
+}
+
+function achievementSortOrder(item) {
+  const order = Number(item?.sort_order);
+  return Number.isFinite(order) ? order : 9999;
+}
+
+function sortAchievements(items) {
+  return [...items].sort((left, right) => achievementSortOrder(left) - achievementSortOrder(right) || String(left.title || '').localeCompare(String(right.title || '')));
+}
+
+function selectAchievementPreview(items) {
+  const withTime = (item) => {
+    const time = new Date(item.unlocked_at || 0).getTime();
+    return Number.isNaN(time) ? 0 : time;
+  };
+  const latestUnlocked = items
+    .filter((item) => item.unlocked)
+    .sort((left, right) => withTime(right) - withTime(left) || achievementSortOrder(right) - achievementSortOrder(left));
+  const relevantLocked = items.filter((item) => !item.unlocked);
+  const seen = new Set();
+  return [...latestUnlocked, ...relevantLocked]
+    .filter((item) => {
+      const key = item.id || item.title;
+      if (seen.has(key)) return false;
+      seen.add(key);
+      return true;
+    })
+    .slice(0, 3);
+}
+
+function achievementProgressHeader(unlockedCount, totalCount, progress) {
+  return `
+    <div class="achievement-progress-copy">
+      <span>Progress</span>
+      <strong>${escapeHtml(unlockedCount)}/${escapeHtml(totalCount)}</strong>
+    </div>
+    <div class="achievement-progress-track" role="progressbar" aria-label="Achievement unlock progress" aria-valuemin="0" aria-valuemax="${escapeHtml(totalCount)}" aria-valuenow="${escapeHtml(unlockedCount)}">
+      <span style="width:${escapeHtml(Math.max(0, Math.min(100, progress)))}%"></span>
+    </div>
+  `;
+}
+
+function achievementCategoryGroups(items) {
+  const groups = new Map();
+  items.forEach((item) => {
+    const category = item.category || 'Achievements';
+    if (!groups.has(category)) groups.set(category, []);
+    groups.get(category).push(item);
+  });
+  return [...groups.entries()].map(([category, categoryItems]) => {
+    const unlocked = categoryItems.filter((item) => item.unlocked).length;
+    return `
+      <section class="achievement-category">
+        <div class="achievement-category-head">
+          <h2>${escapeHtml(category)}</h2>
+          <span>${escapeHtml(unlocked)}/${escapeHtml(categoryItems.length)} unlocked</span>
+        </div>
+        <div class="achievement-grid">
+          ${categoryItems.map(achievementCard).join('')}
+        </div>
+      </section>
+    `;
+  }).join('');
 }
 
 function achievementCard(item) {
+  const stateLabel = item.unlocked ? 'Unlocked' : 'Locked';
+  const body = item.unlocked ? (item.description || item.locked_hint || '') : (item.locked_hint || item.description || '');
+  const unlockedDate = item.unlocked_at ? formatDate(item.unlocked_at) : '';
+  const meta = [item.category, item.tier].filter(Boolean).join(' / ');
   return `
-    <div class="achievement ${item.unlocked ? '' : 'locked'}">
-      <strong>${item.unlocked ? 'Unlocked' : 'Locked'} / ${escapeHtml(item.title)}</strong>
-      <small>${escapeHtml(item.description)}${item.unlocked_at ? ' / ' + escapeHtml(item.unlocked_at) : ''}</small>
-    </div>
+    <article class="achievement-badge ${item.unlocked ? 'unlocked' : 'locked'}" data-accent="${escapeHtml(item.accent || 'primary')}">
+      <div class="achievement-medallion" aria-hidden="true">${escapeHtml(item.icon || (item.unlocked ? '*' : '?'))}</div>
+      <div class="achievement-body">
+        <div class="achievement-title-row">
+          <strong>${escapeHtml(item.title || 'Achievement')}</strong>
+          <span>${escapeHtml(stateLabel)}</span>
+        </div>
+        <small>${escapeHtml(meta || 'Achievement')}</small>
+        <p>${escapeHtml(body)}</p>
+        ${unlockedDate ? `<time datetime="${escapeHtml(item.unlocked_at)}">Unlocked ${escapeHtml(unlockedDate)}</time>` : ''}
+      </div>
+    </article>
   `;
 }
 
 function renderCustomPets(snapshot) {
   const pets = snapshot.custom_pets || [];
+  const hasCurrentCustom = pets.some((pet) => pet.current);
   $('customDir').textContent = snapshot.state_dir ? `${snapshot.state_dir}/custom-pets` : '';
   $('customDir').title = $('customDir').textContent;
-  $('customPetsList').innerHTML = pets.length ? pets.map((pet) => `
-    <div class="pet-row">
+  $('customPetsList').innerHTML = `
+    ${hasCurrentCustom ? `
+      <div class="custom-current-note">
+        <div>
+          <strong>Custom visual selected</strong>
+          <span>The active pet is using custom artwork. Clear it to return the active pet to its built-in visual without deleting the custom package.</span>
+        </div>
+        <button class="secondary" type="button" data-clear-current-custom="true">Use built-in pet</button>
+      </div>
+    ` : ''}
+    ${pets.length ? pets.map((pet) => `
+    <div class="pet-row ${pet.current ? 'current-custom' : ''}">
       <div>
-        <strong>${pet.current ? 'Current / ' : ''}${escapeHtml(pet.name)}</strong>
+        <strong>${pet.current ? 'Current custom visual / ' : ''}${escapeHtml(pet.name)}</strong>
         <small>${pet.valid ? petSummary(pet) : `invalid / ${escapeHtml(pet.error || 'unknown error')}`}</small>
       </div>
       <div class="row-actions">
-        <button class="tiny" type="button" data-use="${escapeHtml(pet.name)}" ${pet.valid ? '' : 'disabled'}>Use</button>
-        <button class="tiny" type="button" data-remove="${escapeHtml(pet.name)}">Remove</button>
+        <button class="tiny" type="button" data-use="${escapeHtml(pet.name)}" ${pet.valid ? '' : 'disabled'}>Use custom</button>
+        ${pet.current ? '<button class="tiny secondary" type="button" data-clear-current-custom="true">Clear</button>' : ''}
+        <button class="tiny danger" type="button" data-remove="${escapeHtml(pet.name)}">Remove</button>
       </div>
     </div>
-  `).join('') : empty('No custom pets installed. Import a validated local package by path.');
+  `).join('') : empty('No custom pets installed. Import a validated local package by path. Built-in pets are available from Change Pet.')}
+  `;
 }
 
 function petSummary(pet) {
@@ -310,16 +467,70 @@ function renderSegmented(id, values, active, onClick) {
   });
 }
 
+function voiceReasonMessage(reason) {
+  const normalized = String(reason || '').toLowerCase();
+  if (normalized.startsWith('invalid-command')) return 'The adapter command could not be parsed.';
+  if (normalized.includes('no such file') || normalized.includes('not found')) return 'The adapter could not be started.';
+  const messages = {
+    'voice-command-missing': 'No adapter command is configured.',
+    timeout: 'The adapter timed out before finishing.',
+    'command-failed': 'The adapter exited with a non-zero status.',
+    'voice-disabled': 'Voice preview is disabled.',
+    'quiet-mode-silent': 'Silent mode suppressed voice output.',
+    'event-not-allowlisted': 'This event is not enabled for voice preview.',
+  };
+  return messages[normalized] || 'The adapter did not complete.';
+}
+
+function voiceSourceLabel(voice) {
+  if (voice?.command_source === 'env') return 'local environment';
+  return 'saved preferences';
+}
+
 function hydrateVoice(voice) {
   state.voice = voice;
-  $('voiceEnabled').checked = !!voice.enabled;
-  $('voiceCommand').value = voice.command || '';
+  const commandFromEnv = voice?.command_source === 'env';
+  const hasCommand = !!String(voice?.command || '').trim();
+  $('voiceEnabled').checked = !!voice?.enabled;
+  $('voiceCommand').disabled = commandFromEnv;
+  $('voiceCommand').value = commandFromEnv ? '' : (voice?.command || '');
+  $('voiceCommand').placeholder = commandFromEnv ? 'Configured by local environment' : 'Local adapter command';
+  const enabledText = voice?.enabled ? 'enabled' : 'disabled';
+  const commandText = hasCommand ? `adapter configured through ${voiceSourceLabel(voice)}` : 'no adapter command configured';
+  const bridgeText = state.snapshot?.bridge?.available === false ? ' Bridge is offline; explicit voice tests still run locally.' : '';
+  $('voiceMeta').textContent = `Voice preview ${enabledText}; ${commandText}.${bridgeText}`;
+}
+
+function setVoiceBusy(isBusy) {
+  $('testVoiceBtn').disabled = isBusy;
+  $('testVoiceBtn').setAttribute('aria-busy', isBusy ? 'true' : 'false');
+  $('voiceResult').setAttribute('aria-busy', isBusy ? 'true' : 'false');
+}
+
+function renderVoiceResult(result) {
+  const ok = !!result?.ok;
+  const skipped = !!result?.skipped;
+  const tone = ok && !skipped ? 'success' : 'error';
+  const title = ok && !skipped ? 'Voice test completed' : 'Voice test did not play';
+  const detail = ok && !skipped ? 'The adapter accepted the test text.' : voiceReasonMessage(result?.reason);
+  const exitRow = Number.isInteger(result?.exit_code)
+    ? `<div class="result-row"><span>Exit code</span><strong>${escapeHtml(result.exit_code)}</strong></div>`
+    : '';
+  $('voiceResult').dataset.tone = tone;
+  $('voiceResult').innerHTML = `
+    <div class="result-summary">
+      <strong>${escapeHtml(title)}</strong>
+      <span>${escapeHtml(detail)}</span>
+    </div>
+    ${exitRow}
+  `;
 }
 
 async function refresh() {
   try {
     if (!state.snapshot) renderLoadingState();
     renderSnapshot(await api('/api/state'));
+    loadSpecies();
   } catch (error) {
     if (state.snapshot) {
       document.body.dataset.stale = 'true';
@@ -330,6 +541,34 @@ async function refresh() {
       $('lastRefresh').textContent = 'Local state could not be loaded.';
       showAlert(error.message, 'error');
     }
+  }
+}
+
+function confirmFreshPet(actionLabel) {
+  const pet = state.snapshot?.pet;
+  if (!pet) return true;
+  return window.confirm(
+    `${actionLabel} will replace ${pet.name || 'the active pet'} with a fresh pet. ` +
+    'XP, stats, and milestones will reset. Installed custom pet packages are kept, but the current custom visual selection will be cleared. Continue?'
+  );
+}
+
+function snapshotFromResult(result) {
+  return result.snapshot || result.state || result;
+}
+
+async function replacePet(path, body, successMessage) {
+  try {
+    const result = await api(path, {
+      method: 'POST',
+      body: JSON.stringify(body || {}),
+    });
+    const snapshot = snapshotFromResult(result);
+    if (snapshot?.pet !== undefined) renderSnapshot(snapshot);
+    await loadSpecies();
+    showAlert(successMessage, 'success');
+  } catch (error) {
+    showAlert(error.message, 'error');
   }
 }
 
@@ -352,14 +591,17 @@ async function savePrefs() {
 
 async function saveVoice() {
   try {
+    const body = { enabled: $('voiceEnabled').checked };
+    if (!$('voiceCommand').disabled) body.command = $('voiceCommand').value;
     const result = await api('/api/voice', {
       method: 'POST',
-      body: JSON.stringify({ enabled: $('voiceEnabled').checked, command: $('voiceCommand').value }),
+      body: JSON.stringify(body),
     });
     hydrateVoice(result.status);
-    showAlert('Voice preview saved.');
+    const hasCommand = !!String(result.status?.command || '').trim();
+    showAlert(hasCommand ? 'Voice preview saved.' : 'Voice preview saved. Add an adapter command before running a test.', hasCommand ? 'success' : 'info');
   } catch (error) {
-    showAlert(error.message, 'error');
+    showAlert('Voice settings could not be saved.', 'error');
   }
 }
 
@@ -384,14 +626,25 @@ $('importBtn').addEventListener('click', async () => {
 $('customPetsList').addEventListener('click', async (event) => {
   const use = event.target?.dataset?.use;
   const remove = event.target?.dataset?.remove;
+  const clearCurrent = event.target?.dataset?.clearCurrentCustom;
   try {
     if (use) await api('/api/custom-pets/use', { method: 'POST', body: JSON.stringify({ name: use }) });
+    if (clearCurrent) await api('/api/custom-pets/clear-current', { method: 'POST', body: '{}' });
     if (remove) await api(`/api/custom-pets/${encodeURIComponent(remove)}`, { method: 'DELETE' });
-    showAlert(use ? 'Custom pet selected.' : 'Custom pet removed.');
+    showAlert(use ? 'Custom visual selected.' : clearCurrent ? 'Built-in pet visual restored.' : 'Custom pet package removed.', clearCurrent ? 'success' : 'info');
     refresh();
   } catch (error) {
     showAlert(error.message, 'error');
   }
+});
+$('speciesList').addEventListener('click', async (event) => {
+  const species = event.target?.dataset?.adoptSpecies;
+  if (!species || !confirmFreshPet(`Adopting ${species}`)) return;
+  await replacePet('/api/pets/adopt', { species }, `${species} adopted as a fresh built-in pet.`);
+});
+$('randomHatchBtn').addEventListener('click', async () => {
+  if (!confirmFreshPet('Random hatch')) return;
+  await replacePet('/api/pets/random-hatch', {}, 'Random built-in pet hatched.');
 });
 $('testEventBtn').addEventListener('click', async () => {
   try {
@@ -404,14 +657,27 @@ $('testEventBtn').addEventListener('click', async () => {
 });
 $('testVoiceBtn').addEventListener('click', async () => {
   try {
+    setVoiceBusy(true);
+    $('voiceResult').dataset.tone = 'info';
+    $('voiceResult').textContent = 'Running explicit local voice test...';
     const result = await api('/api/voice/test', {
       method: 'POST',
       body: JSON.stringify({ text: $('voiceText').value }),
     });
-    $('voiceResult').textContent = JSON.stringify(result.result, null, 2);
-    showAlert(result.result.ok ? 'Voice test completed.' : 'Voice test reported a problem.');
+    hydrateVoice(result.status);
+    renderVoiceResult(result.result || {});
+    showAlert(result.result?.ok ? 'Voice test completed.' : voiceReasonMessage(result.result?.reason), result.result?.ok ? 'success' : 'error');
   } catch (error) {
-    showAlert(error.message, 'error');
+    $('voiceResult').dataset.tone = 'error';
+    $('voiceResult').innerHTML = `
+      <div class="result-summary">
+        <strong>Voice test unavailable</strong>
+        <span>The local dashboard API could not complete the explicit test.</span>
+      </div>
+    `;
+    showAlert('Voice test could not be completed.', 'error');
+  } finally {
+    setVoiceBusy(false);
   }
 });
 

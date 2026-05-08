@@ -10,6 +10,22 @@ The v0.3.0 dashboard is premium local operator software: dense, calm, tactile, a
 - Voice: opt-in preview toggle, adapter command, explicit test text, and last result.
 - Achievements: compact locked/unlocked ledger only.
 
+## Pet Changing Semantics
+
+The dashboard has three related but separate pieces of pet state:
+
+- Active pet identity and progression live in `pet.json`. This is the canonical companion record: name, species, variant, hat, XP, level, stats, interactions, milestones, and creation timestamps.
+- Built-in species sprites are the packaged visual set for the active pet species. They are selected by replacing the canonical active pet with a fresh hatch.
+- Custom pet packages live under the local custom-pets directory, while the current visual override lives in `custom-pet-current.json`. Custom packages are visual sprite packages only; they are not separate canonical pets and do not carry XP, stats, or milestones.
+
+Changing to a built-in species from the dashboard means creating and saving a fresh `Pet` in `pet.json`, matching `hermes-pet hatch` reset semantics. The new companion starts over with fresh XP, stats, interactions, milestones, variant, hat, and timestamps. Choosing a specific built-in species uses that species for the fresh pet. Random hatch uses the normal gacha pool.
+
+Choosing a built-in species or random hatch also clears `custom-pet-current.json` so the visible pet matches the newly active built-in species. Installed custom pet package directories are kept. Clearing the current custom pet selection only removes the current visual override; it must not delete installed packages.
+
+Replacement confirmation copy should be direct and consistent:
+
+> Changing pets creates a fresh companion and resets XP, stats, and milestones. Installed custom pet packages are kept, but the current custom sprite selection will be cleared.
+
 ## Visual System
 
 - Layout uses a persistent left rail on desktop and a compact top rail on narrow screens.

@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "hermes-pet"
-version = "0.2.0"
+version = "0.3.0"
 description = "Tamagotchi-style desktop coding companion — adopt a virtual pet that levels up as you code"
 readme = "README.md"
 authors = [{ name = "Hermes Pets Contributors" }]
@@ -72,4 +72,7 @@ hermes_pet = [
   "overlay/assets/manifest.json",
   "overlay/assets/sprites/**/*",
   "overlay/scripts/*.ps1",
+  "dashboard/*.html",
+  "dashboard/*.css",
+  "dashboard/*.js",
 ]

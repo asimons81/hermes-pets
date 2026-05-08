@@ -196,23 +196,30 @@ class Pet:
     # ------------------------------------------------------------------
 
     @classmethod
-    def hatch(cls, profile_name: str, force_seed: int | None = None) -> "Pet":
+    def hatch(cls, profile_name: str, force_seed: int | None = None, species: str | None = None) -> "Pet":
         """Gacha a new pet. Deterministic per profile unless force_seed is given.
 
         Respects ``HERMES_PET_SPECIES``: when the env var is set to a known
-        species name, that species is used instead of the gacha roll.
+        species name, that species is used instead of the gacha roll. Callers
+        may also pass a known ``species`` to adopt that species directly.
         """
         seed = force_seed if force_seed is not None else _hash_seed(profile_name)
         rng = _mulberry32(seed)
 
-        env_species = (os.environ.get("HERMES_PET_SPECIES") or "").strip().lower()
-        if env_species and env_species in SPECIES:
-            species = env_species
+        requested_species = (species or "").strip().lower()
+        if requested_species:
+            if requested_species not in SPECIES:
+                raise ValueError(f"Unknown species: {requested_species}")
+            species = requested_species
         else:
-            rarity_pool: list[str] = []
-            for sname, sdef in SPECIES.items():
-                rarity_pool.extend([sname] * RARITY_WEIGHTS[sdef.rarity])
-            species = rng.choice(rarity_pool)
+            env_species = (os.environ.get("HERMES_PET_SPECIES") or "").strip().lower()
+            if env_species and env_species in SPECIES:
+                species = env_species
+            else:
+                rarity_pool: list[str] = []
+                for sname, sdef in SPECIES.items():
+                    rarity_pool.extend([sname] * RARITY_WEIGHTS[sdef.rarity])
+                species = rng.choice(rarity_pool)
 
         variant_roll = rng.random()
         if variant_roll < 0.01:

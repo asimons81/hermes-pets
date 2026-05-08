@@ -1143,6 +1143,7 @@ function handleEvent(msg) {
     case 'job_history':
     case 'approval_needed':
     case 'daily_brief':
+    case 'achievement_unlocked':
       if (msg.type === 'job_history') recordJobHistory(msg);
       else handleAmbientEvent(msg);
       break;

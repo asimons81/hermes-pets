@@ -90,19 +90,22 @@ Use `0.1.1` only if the release task intentionally narrows scope to documentatio
 and patch-level packaging cleanup without presenting Phase 5 as the next public
 readiness release.
 
-## v0.3.0 Dashboard Preview Owner Review
+## v0.3.0 Dashboard Release Readiness
 
-The v0.3.0 dashboard preview is prepared locally for owner review only. Do not
-push, tag, publish to PyPI, publish an installer, or create a release from this
-work unless a later task explicitly asks for it.
+The v0.3.0 dashboard milestone is prepared as a public release candidate after
+the explicit 2026-05-08 release-readiness task. GitHub release/tagging should
+still be a deliberate release operation after the worktree is clean. PyPI upload
+and installer publishing remain out of scope.
 
-Scope completed locally:
+Scope completed:
 
 - Localhost-only `hermes-pet dashboard` with per-process token auth.
 - Static dashboard overview with pet state, selected custom pet, prefs summary,
   recent jobs/events, bridge status, and achievement preview.
-- Custom pet dashboard APIs and UI for typed-path import, select, remove, list,
-  invalid state display, and overlay test event.
+- Change Pet dashboard APIs and UI for replacing the active built-in pet,
+  random hatch, confirmation copy, and custom visual clearing.
+- Custom pet dashboard APIs and UI for typed-path import, select, clear, remove,
+  list, invalid state display, and overlay test event.
 - Preferences APIs and UI for profile, quiet mode, tray-on-urgent, idle bubbles,
   throttle, and bridge-offline-safe saves.
 - Opt-in voice preview CLI/API/UI with adapter command, env override, stdin text,
@@ -116,12 +119,38 @@ Scope completed locally:
 Out of scope remains explicit: PyPI, installer publishing, hosted gallery,
 drag/drop import, full voice mode, and rich achievement celebrations.
 
-Owner-review readiness stack:
+Release readiness stack passed on 2026-05-08:
 
 ```bash
-pytest
+python3 -m compileall -q src/hermes_pet
+uv run pytest
+node --check overlay/src/renderer.js
+node --check overlay/src/main.js
+node --check overlay/src/main.windows.js
+node --check overlay/src/preload.js
+node --check src/hermes_pet/dashboard/app.js
 node scripts/smoke-renderer.js
+bash -n shell-helpers/hermes-pet.bash scripts/smoke-hermes-pet.sh scripts/smoke-github-install.sh scripts/verify-packaged-overlay.sh scripts/verify-live-overlay.sh
+python3 scripts/validate-sprite-manifest.py
 scripts/smoke-hermes-pet.sh --temp-state
+scripts/smoke-hermes-pet.sh --fresh-install
 scripts/verify-packaged-overlay.sh
 python3 scripts/verify-package-artifacts.py
+scripts/verify-live-overlay.sh
+HERMES_PET_INSTALL_TARGET=/home/tony/projects/hermes-pet scripts/smoke-github-install.sh
+hermes-pet doctor
 ```
+
+Results:
+
+- `uv run pytest`: 64 passed.
+- Package artifact inspection built and verified v0.3.0 wheel and sdist files.
+- Live overlay verification passed on WSL/Windows, including launch, bridge
+  connection, custom pet fallback, success/failure/attention event forwarding,
+  attention tray state, bridge disconnect, reconnect, and cleanup.
+- Local GitHub-style install smoke passed with
+  `HERMES_PET_INSTALL_TARGET=/home/tony/projects/hermes-pet`.
+- `hermes-pet doctor` reported `Doctor result: ready.`
+
+Release decision: v0.3.0 is ready for an explicit GitHub tag/release operation
+after final clean-tree verification. PyPI and installer publishing are deferred.

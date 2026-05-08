@@ -145,11 +145,18 @@ voice preview controls, and foundational achievements. The overview centers the
 active pet, keeps recent wrapped-job signal close by, and shows local bridge
 health without implying hosted access. It also supports:
 
+- changing the active pet to a built-in species or hatching a fresh random pet;
 - importing a custom pet by typed local path and installed name;
-- selecting or removing installed custom pets;
+- selecting, clearing, or removing installed custom pet visual packages;
 - changing notification profile, quiet mode, tray/idle toggles, and bubble throttle;
 - enabling/disabling opt-in voice preview and running one harmless adapter test;
 - sending a dashboard test event to the overlay when the bridge is available.
+
+Changing to a built-in species or using random hatch replaces the canonical
+active pet in `pet.json`. It matches `hermes-pet hatch` behavior: XP, stats,
+interactions, and milestones start fresh. That action also clears the current
+custom visual selection so the visible pet returns to the built-in species, but
+installed custom pet packages are kept.
 
 No drag/drop import, hosted gallery, full voice mode, or rich achievement
 celebrations are included in v0.3.0.
@@ -175,10 +182,12 @@ hermes-pet custom-pet current
 hermes-pet custom-pet remove <name>
 ```
 
-The same import/select/remove workflow is available in the local dashboard. Use
-the CLI for validation and preview HTML when preparing a package, then use the
-dashboard when you want a compact operator surface for selecting or removing
-installed pets.
+The same import/select/remove workflow is available in the local dashboard, with
+one extra non-destructive control: `Use built-in pet` clears the current custom
+visual selection without deleting installed packages. Use the CLI for validation
+and preview HTML when preparing a package, then use the dashboard when you want
+a compact operator surface for selecting, clearing, or removing installed visual
+packages.
 
 `<path>` can be a finalized `hatch-pet` run or a package with `custom-pet.json` and `sprites/<state>/*.png`. `idle` is required; optional states fall back to idle when missing. See `CUSTOM_PETS.md` for the package format and the repo-local Codex skill at `.codex/skills/hermes-pet-hatch/SKILL.md`.
 
@@ -612,15 +621,26 @@ scripts/verify-live-overlay.sh
 Run `scripts/verify-live-overlay.sh` when the local environment can launch the
 real WSL/Windows overlay.
 
-For v0.3.0 dashboard preview readiness, run the final local stack without
-pushing, tagging, publishing, or uploading:
+For v0.3.0 dashboard release readiness, run the final local stack:
 
 ```bash
-pytest
+python3 -m compileall -q src/hermes_pet
+uv run pytest
+node --check overlay/src/renderer.js
+node --check overlay/src/main.js
+node --check overlay/src/main.windows.js
+node --check overlay/src/preload.js
+node --check src/hermes_pet/dashboard/app.js
 node scripts/smoke-renderer.js
+bash -n shell-helpers/hermes-pet.bash scripts/smoke-hermes-pet.sh scripts/smoke-github-install.sh scripts/verify-packaged-overlay.sh scripts/verify-live-overlay.sh
+python3 scripts/validate-sprite-manifest.py
 scripts/smoke-hermes-pet.sh --temp-state
+scripts/smoke-hermes-pet.sh --fresh-install
 scripts/verify-packaged-overlay.sh
 python3 scripts/verify-package-artifacts.py
+scripts/verify-live-overlay.sh
+HERMES_PET_INSTALL_TARGET=/home/tony/projects/hermes-pet scripts/smoke-github-install.sh
+hermes-pet doctor
 ```
 
 Then record dashboard QA evidence by launching `hermes-pet dashboard --no-open`

@@ -24,6 +24,7 @@
 
       <nav class="nav-stack" aria-label="Dashboard views">
         <button class="nav-item active" data-view="overview" type="button" aria-current="page">Overview</button>
+        <button class="nav-item" data-view="change" type="button">Change Pet</button>
         <button class="nav-item" data-view="custom" type="button">Custom Pets</button>
         <button class="nav-item" data-view="prefs" type="button">Preferences</button>
         <button class="nav-item" data-view="voice" type="button">Voice</button>
@@ -89,11 +90,31 @@
         </div>
       </section>
 
+      <section id="change" class="view">
+        <div class="split-layout change-layout">
+          <section class="panel">
+            <div class="panel-head">
+              <span>Built-in Species</span>
+              <small id="speciesCount"></small>
+            </div>
+            <div id="speciesList" class="species-list" aria-live="polite"></div>
+          </section>
+          <section class="panel control-stack">
+            <div class="panel-head">
+              <span>Random Hatch</span>
+              <small>fresh companion</small>
+            </div>
+            <p class="panel-copy">Hatch a new built-in pet from the catalog. Replacing an active pet starts fresh and resets XP, stats, and milestones.</p>
+            <button id="randomHatchBtn" class="primary" type="button">Random Hatch</button>
+          </section>
+        </div>
+      </section>
+
       <section id="custom" class="view">
         <div class="split-layout">
           <section class="panel">
             <div class="panel-head">
-              <span>Installed Pets</span>
+              <span>Installed Visuals</span>
               <small id="customDir"></small>
             </div>
             <div id="customPetsList" class="pet-list"></div>
@@ -146,8 +167,9 @@
               <span>Voice Preview</span>
               <small>opt-in adapter</small>
             </div>
-            <label class="toggle-line"><span>Enabled</span><input id="voiceEnabled" type="checkbox"></label>
-            <label>Adapter command <input id="voiceCommand" type="text" autocomplete="off" spellcheck="false"></label>
+            <label class="toggle-line"><span>Enabled</span><input id="voiceEnabled" type="checkbox" aria-describedby="voiceMeta"></label>
+            <label>Adapter command <input id="voiceCommand" type="text" autocomplete="off" spellcheck="false" aria-describedby="voiceMeta"></label>
+            <p id="voiceMeta" class="field-note" aria-live="polite">Voice preview status will appear after local state loads.</p>
             <button id="saveVoiceBtn" class="primary" type="button">Save Voice</button>
           </section>
           <section class="panel form-panel">
@@ -155,20 +177,21 @@
               <span>Test</span>
               <small>stdin adapter check</small>
             </div>
-            <label>Text <input id="voiceText" type="text" value="Hermes Pets voice preview test."></label>
-            <button id="testVoiceBtn" class="secondary" type="button">Run Test</button>
-            <pre id="voiceResult" class="result-box" aria-live="polite"></pre>
+            <label>Text <input id="voiceText" type="text" value="Hermes Pets voice preview test." aria-describedby="voiceResult"></label>
+            <button id="testVoiceBtn" class="secondary" type="button" aria-controls="voiceResult">Run Test</button>
+            <div id="voiceResult" class="result-box" role="status" aria-live="polite" aria-atomic="true" tabindex="0">No voice test has run in this session.</div>
           </section>
         </div>
       </section>
 
       <section id="achievements" class="view">
-        <section class="panel">
+        <section class="panel achievements-panel">
           <div class="panel-head">
-            <span>Achievement Foundation</span>
-            <small>simple unlock ledger</small>
+            <span>Achievement Ledger</span>
+            <small>badge progress</small>
           </div>
-          <div id="achievementGrid" class="achievement-grid"></div>
+          <div id="achievementProgress" class="achievement-progress"></div>
+          <div id="achievementGrid" class="achievement-category-stack"></div>
         </section>
       </section>
     </main>
