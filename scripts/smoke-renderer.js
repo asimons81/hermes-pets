@@ -50,7 +50,7 @@ function makeElement(id = '') {
     style: {},
     children: [],
     classList: new FakeClassList(initialClasses),
-    textContent: '',
+    _textContent: '',
     offsetWidth: 120,
     addEventListener() {},
     appendChild(child) {
@@ -71,6 +71,13 @@ function makeElement(id = '') {
     },
     get innerHTML() {
       return this.textContent;
+    },
+    set textContent(value) {
+      this._textContent = String(value || '');
+      this.children = [];
+    },
+    get textContent() {
+      return this._textContent;
     },
   };
 }
@@ -196,6 +203,43 @@ async function main() {
   smoke.handleEvent({ type: 'message_received', source: 'telegram', sender: 'Ada', text: 'Can you review?', urgent: true });
   await flush();
   assert(smoke.getRecentEvents()[0].group === 'messages', 'message events should be grouped for tray scanning');
+
+  smoke.resetActivityForSmoke();
+  smoke.handleEvent({
+    type: 'notification_prefs',
+    prefs: { notification_profile: 'normal', quiet_mode: 'off', show_idle_bubbles: false },
+  });
+  smoke.handleEvent({ type: 'achievement_unlocked', achievement: { title: 'Clean Run' } });
+  await flush();
+  const achievementEvent = smoke.getRecentEvents()[0];
+  const achievementRow = document.getElementById('event-list').children[0];
+  assert(achievementEvent.type === 'achievement_unlocked', 'achievement events should reach activity handling');
+  assert(achievementEvent.text === 'Achievement unlocked: Clean Run', 'achievement title should drive overlay copy');
+  assert(achievementEvent.group === 'achievements', 'achievement events should have their own tray group');
+  assert(achievementEvent.severity === 'info', 'achievement events should remain non-critical');
+  assert(smoke.isTrayVisible(), 'achievement unlock should open the tray in normal mode');
+  assert(!smoke.isTrayAttention(), 'achievement unlock should not mark the tray as attention state');
+  assert(smoke.getBubbleText() === 'Achievement unlocked: Clean Run', 'achievement unlock should show quiet bubble copy');
+  assert(document.getElementById('event-summary').textContent.includes('1 achievement'), 'achievement should appear in tray summary');
+  assert(achievementRow.children[0].textContent === 'A', 'achievement row should use its own icon');
+  assert(
+    achievementRow.children[1].children[0].textContent === 'Achievement unlocked: Clean Run',
+    'achievement row should show unlock copy'
+  );
+  assert(achievementRow.children[1].children[1].textContent === 'Achievements', 'achievement row should show achievement meta');
+
+  const bubbleBeforeQuietAchievement = smoke.getBubbleText();
+  smoke.resetActivityForSmoke();
+  smoke.handleEvent({
+    type: 'notification_prefs',
+    prefs: { notification_profile: 'focus', quiet_mode: 'important', show_idle_bubbles: false },
+  });
+  smoke.handleEvent({ type: 'achievement_unlocked', achievement: { title: 'Quiet Win' } });
+  await flush();
+  assert(smoke.getRecentEvents()[0].type === 'achievement_unlocked', 'quiet achievement should still be recorded');
+  assert(!smoke.isTrayVisible(), 'quiet mode should suppress non-critical achievement tray popover');
+  assert(smoke.getBubbleText() === '', 'quiet mode should suppress non-critical achievement bubble');
+  assert(bubbleBeforeQuietAchievement === 'Achievement unlocked: Clean Run', 'normal achievement bubble should have rendered before quiet suppression');
 
   smoke.handleEvent({
     type: 'state',

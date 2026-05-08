@@ -1,0 +1,201 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Hermes Pets Dashboard</title>
+  <link rel="stylesheet" href="app.css">
+</head>
+<body>
+  <div class="shell">
+    <aside class="rail" aria-label="Hermes Pets console">
+      <div class="mark" aria-label="Hermes Pets local operator console">
+        <span class="mark-dot" aria-hidden="true">H</span>
+        <div>
+          <strong>Hermes Pets</strong>
+          <small>Companion console</small>
+        </div>
+      </div>
+
+      <div class="local-seal">
+        <span>Private local session</span>
+        <small>localhost-only / token gated</small>
+      </div>
+
+      <nav class="nav-stack" aria-label="Dashboard views">
+        <button class="nav-item active" data-view="overview" type="button" aria-current="page">Overview</button>
+        <button class="nav-item" data-view="change" type="button">Change Pet</button>
+        <button class="nav-item" data-view="custom" type="button">Custom Pets</button>
+        <button class="nav-item" data-view="prefs" type="button">Preferences</button>
+        <button class="nav-item" data-view="voice" type="button">Voice</button>
+        <button class="nav-item" data-view="achievements" type="button">Achievements</button>
+      </nav>
+
+      <div class="rail-status" role="status" aria-live="polite">
+        <span id="bridgeDot" class="status-dot" aria-hidden="true"></span>
+        <span id="bridgeText">Checking bridge</span>
+      </div>
+    </aside>
+
+    <main class="workspace">
+      <header class="topbar">
+        <div>
+          <p class="eyebrow">Local companion operating system</p>
+          <h1 id="viewTitle">Overview</h1>
+          <p id="viewSubtitle" class="view-subtitle">Your active pet, recent signals, and local console health.</p>
+          <p id="lastRefresh" class="refresh-meta" role="status">Waiting for local state.</p>
+        </div>
+        <div class="top-actions" aria-label="Dashboard commands">
+          <button id="testEventBtn" class="action-button" type="button" aria-label="Send a dashboard test event to the overlay">Ping</button>
+          <button id="refreshBtn" class="action-button" type="button" aria-label="Refresh local dashboard state">Refresh</button>
+        </div>
+      </header>
+
+      <div id="alert" class="alert hidden" role="status"></div>
+
+      <section id="overview" class="view active">
+        <div class="overview-grid">
+          <section class="panel pet-panel">
+            <div class="panel-head">
+              <span>Pet</span>
+              <small id="stateDir"></small>
+            </div>
+            <div id="petCard" class="pet-card"><div class="empty">Loading local pet state...</div></div>
+          </section>
+
+          <section class="panel">
+            <div class="panel-head">
+              <span>Signal</span>
+              <small>recent jobs</small>
+            </div>
+            <div id="jobSummary" class="status-metrics"></div>
+            <div id="jobsList" class="activity-list"><div class="empty">Loading recent jobs...</div></div>
+          </section>
+
+          <section class="panel">
+            <div class="panel-head">
+              <span>Activity</span>
+              <small>event log</small>
+            </div>
+            <div id="eventsList" class="activity-list"><div class="empty">Loading recent events...</div></div>
+          </section>
+
+          <section class="panel">
+            <div class="panel-head">
+              <span>Achievements</span>
+              <small id="achievementCount"></small>
+            </div>
+            <div id="achievementPreview" class="achievement-strip"></div>
+          </section>
+        </div>
+      </section>
+
+      <section id="change" class="view">
+        <div class="split-layout change-layout">
+          <section class="panel">
+            <div class="panel-head">
+              <span>Built-in Species</span>
+              <small id="speciesCount"></small>
+            </div>
+            <div id="speciesList" class="species-list" aria-live="polite"></div>
+          </section>
+          <section class="panel control-stack">
+            <div class="panel-head">
+              <span>Random Hatch</span>
+              <small>fresh companion</small>
+            </div>
+            <p class="panel-copy">Hatch a new built-in pet from the catalog. Replacing an active pet starts fresh and resets XP, stats, and milestones.</p>
+            <button id="randomHatchBtn" class="primary" type="button">Random Hatch</button>
+          </section>
+        </div>
+      </section>
+
+      <section id="custom" class="view">
+        <div class="split-layout">
+          <section class="panel">
+            <div class="panel-head">
+              <span>Installed Visuals</span>
+              <small id="customDir"></small>
+            </div>
+            <div id="customPetsList" class="pet-list"></div>
+          </section>
+          <section class="panel form-panel">
+            <div class="panel-head">
+              <span>Import Package</span>
+              <small>typed local path</small>
+            </div>
+            <label>Package path <input id="importPath" type="text" autocomplete="off" spellcheck="false"></label>
+            <label>Installed name <input id="importName" type="text" autocomplete="off" spellcheck="false"></label>
+            <button id="importBtn" class="primary" type="button">Import</button>
+          </section>
+        </div>
+      </section>
+
+      <section id="prefs" class="view">
+        <div class="settings-grid">
+          <section class="panel">
+            <div class="panel-head">
+              <span>Profile</span>
+              <small>notification posture</small>
+            </div>
+            <div id="profileControl" class="segmented" role="group" aria-label="Notification profile"></div>
+          </section>
+          <section class="panel">
+            <div class="panel-head">
+              <span>Quiet Mode</span>
+              <small>delivery filter</small>
+            </div>
+            <div id="quietControl" class="segmented" role="group" aria-label="Quiet mode"></div>
+          </section>
+          <section class="panel control-stack">
+            <div class="panel-head">
+              <span>Behavior</span>
+              <small>saved locally</small>
+            </div>
+            <label class="toggle-line"><span>Tray on urgent</span><input id="trayToggle" type="checkbox"></label>
+            <label class="toggle-line"><span>Idle bubbles</span><input id="idleToggle" type="checkbox"></label>
+            <label>Bubble throttle <input id="throttleInput" type="number" min="0" max="3600" step="0.5"></label>
+            <button id="savePrefsBtn" class="primary" type="button">Save Preferences</button>
+          </section>
+        </div>
+      </section>
+
+      <section id="voice" class="view">
+        <div class="split-layout">
+          <section class="panel control-stack">
+            <div class="panel-head">
+              <span>Voice Preview</span>
+              <small>opt-in adapter</small>
+            </div>
+            <label class="toggle-line"><span>Enabled</span><input id="voiceEnabled" type="checkbox" aria-describedby="voiceMeta"></label>
+            <label>Adapter command <input id="voiceCommand" type="text" autocomplete="off" spellcheck="false" aria-describedby="voiceMeta"></label>
+            <p id="voiceMeta" class="field-note" aria-live="polite">Voice preview status will appear after local state loads.</p>
+            <button id="saveVoiceBtn" class="primary" type="button">Save Voice</button>
+          </section>
+          <section class="panel form-panel">
+            <div class="panel-head">
+              <span>Test</span>
+              <small>stdin adapter check</small>
+            </div>
+            <label>Text <input id="voiceText" type="text" value="Hermes Pets voice preview test." aria-describedby="voiceResult"></label>
+            <button id="testVoiceBtn" class="secondary" type="button" aria-controls="voiceResult">Run Test</button>
+            <div id="voiceResult" class="result-box" role="status" aria-live="polite" aria-atomic="true" tabindex="0">No voice test has run in this session.</div>
+          </section>
+        </div>
+      </section>
+
+      <section id="achievements" class="view">
+        <section class="panel achievements-panel">
+          <div class="panel-head">
+            <span>Achievement Ledger</span>
+            <small>badge progress</small>
+          </div>
+          <div id="achievementProgress" class="achievement-progress"></div>
+          <div id="achievementGrid" class="achievement-category-stack"></div>
+        </section>
+      </section>
+    </main>
+  </div>
+  <script src="app.js"></script>
+</body>
+</html>

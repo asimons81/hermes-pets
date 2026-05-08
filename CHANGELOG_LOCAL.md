@@ -10,6 +10,18 @@ This file records local implementation milestones and release-candidate notes al
 
 ## Implemented Milestones
 
+## v0.3.0 - 2026-05-08
+
+- Released the dashboard milestone as the v0.3.0 public release candidate.
+- Added `hermes-pet dashboard`, a localhost-only, token-protected operator dashboard.
+- Added dashboard state, custom pet, preferences, voice preview, achievements, and test-event APIs.
+- Added packaged static dashboard assets with artifact verification for wheel and sdist builds.
+- Added typed-path custom pet import/select/remove from the dashboard; drag/drop import and hosted gallery remain out of scope.
+- Added opt-in voice preview plumbing with `voice-prefs.json`, `hermes-pet voice ...`, `HERMES_PET_TTS_COMMAND`, event allowlisting, stdin text, metadata env vars, timeout handling, and dashboard controls.
+- Added foundational achievements in `achievements.json` with idempotent unlocks and simple overlay `achievement_unlocked` handling.
+- Added dashboard visual design spec and screenshot smoke helper for desktop/mobile QA evidence.
+- Bumped package metadata from `0.2.0` to `0.3.0`; PyPI upload and installer publishing remain out of scope.
+
 ## v0.2.0 - 2026-05-07
 
 - Released Phase 5 as the public readiness baseline for WSL2/Windows full-overlay support.

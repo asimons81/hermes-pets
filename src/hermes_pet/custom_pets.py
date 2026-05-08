@@ -485,6 +485,15 @@ def set_current_custom_pet(name: str, base_dir: Path | None = None) -> dict[str,
     return custom_pet_event_payload(base_dir)
 
 
+def clear_current_custom_pet(base_dir: Path | None = None) -> bool:
+    path = current_selection_path(base_dir)
+    try:
+        path.unlink()
+    except FileNotFoundError:
+        return False
+    return True
+
+
 def current_custom_pet(base_dir: Path | None = None) -> dict[str, Any] | None:
     path = current_selection_path(base_dir)
     try:
