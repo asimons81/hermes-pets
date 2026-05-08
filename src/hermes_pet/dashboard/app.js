@@ -21,7 +21,11 @@ async function api(path, options = {}) {
     },
   });
   const payload = await response.json().catch(() => ({}));
-  if (!response.ok) throw new Error(payload.error || response.statusText);
+  if (!response.ok) {
+    const error = new Error(payload.error || response.statusText);
+    error.status = response.status;
+    throw error;
+  }
   return payload;
 }
 
@@ -40,6 +44,38 @@ function showAlert(message, tone = 'info') {
 
 function empty(text) {
   return `<div class="empty">${escapeHtml(text)}</div>`;
+}
+
+function stateCard(tone, title, body) {
+  return `
+    <div class="state-card" data-tone="${escapeHtml(tone)}">
+      <strong>${escapeHtml(title)}</strong>
+      <span>${escapeHtml(body)}</span>
+    </div>
+  `;
+}
+
+function renderLoadingState() {
+  $('petCard').className = 'pet-card pet-empty-card';
+  $('petCard').innerHTML = stateCard('loading', 'Loading local pet state', 'Reading the token-protected dashboard snapshot from this machine.');
+  $('jobSummary').innerHTML = '';
+  $('jobsList').innerHTML = stateCard('loading', 'Loading recent jobs', 'Wrapped command history will appear here when the state snapshot arrives.');
+  $('eventsList').innerHTML = stateCard('loading', 'Loading event log', 'Recent local companion signals will appear here shortly.');
+  $('achievementPreview').innerHTML = stateCard('loading', 'Loading achievements', 'Checking the compact local unlock ledger.');
+}
+
+function renderApiError(error) {
+  const auth = error.status === 401;
+  const title = auth ? 'Dashboard token required' : 'Dashboard API unavailable';
+  const body = auth
+    ? 'Open the private token URL printed by hermes-pet dashboard, or refresh this page from that same local session.'
+    : 'The local server did not return a usable state snapshot. Check the dashboard process, then refresh.';
+  $('petCard').className = 'pet-card pet-empty-card';
+  $('petCard').innerHTML = stateCard('error', title, body);
+  $('jobSummary').innerHTML = '';
+  $('jobsList').innerHTML = stateCard('error', 'Signal feed paused', body);
+  $('eventsList').innerHTML = stateCard('error', 'Event log paused', body);
+  $('achievementPreview').innerHTML = stateCard('error', 'Achievement ledger paused', body);
 }
 
 function formatTimestamp(value) {
@@ -93,10 +129,12 @@ function setView(name) {
 
 function renderSnapshot(snapshot) {
   state.snapshot = snapshot;
+  document.body.dataset.stale = 'false';
   $('stateDir').textContent = snapshot.state_dir || '';
+  $('lastRefresh').textContent = snapshot.generated_at ? `Snapshot refreshed ${formatTimestamp(snapshot.generated_at)}` : 'Snapshot refreshed.';
   const dot = $('bridgeDot');
   dot.classList.toggle('ok', !!snapshot.bridge?.available);
-  $('bridgeText').textContent = snapshot.bridge?.available ? 'Bridge online' : 'Bridge offline';
+  $('bridgeText').textContent = snapshot.bridge?.available ? 'Bridge online' : 'Bridge offline - local state still available';
   renderPet(snapshot);
   renderJobs(snapshot);
   renderEvents(snapshot);
@@ -278,9 +316,18 @@ function hydrateVoice(voice) {
 
 async function refresh() {
   try {
+    if (!state.snapshot) renderLoadingState();
     renderSnapshot(await api('/api/state'));
   } catch (error) {
-    showAlert(error.message, 'error');
+    if (state.snapshot) {
+      document.body.dataset.stale = 'true';
+      $('lastRefresh').textContent = 'Refresh failed; showing the last successful local snapshot.';
+      showAlert(`Refresh failed: ${error.message}. Showing the last successful snapshot.`, 'error');
+    } else {
+      renderApiError(error);
+      $('lastRefresh').textContent = 'Local state could not be loaded.';
+      showAlert(error.message, 'error');
+    }
   }
 }
 

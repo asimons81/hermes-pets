@@ -248,6 +248,16 @@ input {
   line-height: 1.45;
 }
 
+.refresh-meta {
+  margin: var(--space-2) 0 0;
+  color: var(--color-text-muted);
+  font-size: 12px;
+}
+
+body[data-stale="true"] .refresh-meta {
+  color: var(--color-status-warning);
+}
+
 .top-actions {
   display: flex;
   gap: var(--space-3);
@@ -827,6 +837,41 @@ input[type="checkbox"] {
   padding: var(--space-6);
   color: var(--color-text-muted);
   background: var(--empty-bg);
+}
+
+.state-card {
+  border: 1px dashed var(--empty-border);
+  border-radius: var(--radius-sm);
+  padding: var(--space-6);
+  background: var(--empty-bg);
+}
+
+.state-card strong,
+.state-card span {
+  display: block;
+}
+
+.state-card strong {
+  color: var(--color-text-primary);
+}
+
+.state-card span {
+  margin-top: var(--space-2);
+  color: var(--color-text-muted);
+  line-height: 1.45;
+}
+
+.state-card[data-tone="loading"] {
+  border-style: solid;
+}
+
+.state-card[data-tone="error"] {
+  border-color: var(--alert-error-border);
+  background: var(--alert-error-bg);
+}
+
+.state-card[data-tone="error"] span {
+  color: var(--alert-error-text);
 }
 
 .result-box {
