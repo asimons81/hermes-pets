@@ -42,7 +42,7 @@
           <p class="eyebrow">Local companion operating system</p>
           <h1 id="viewTitle">Overview</h1>
           <p id="viewSubtitle" class="view-subtitle">Your active pet, recent signals, and local console health.</p>
-          <p id="lastRefresh" class="refresh-meta">Waiting for local state.</p>
+          <p id="lastRefresh" class="refresh-meta" role="status">Waiting for local state.</p>
         </div>
         <div class="top-actions" aria-label="Dashboard commands">
           <button id="testEventBtn" class="action-button" type="button" aria-label="Send a dashboard test event to the overlay">Ping</button>
@@ -117,14 +117,14 @@
               <span>Profile</span>
               <small>notification posture</small>
             </div>
-            <div id="profileControl" class="segmented"></div>
+            <div id="profileControl" class="segmented" role="group" aria-label="Notification profile"></div>
           </section>
           <section class="panel">
             <div class="panel-head">
               <span>Quiet Mode</span>
               <small>delivery filter</small>
             </div>
-            <div id="quietControl" class="segmented"></div>
+            <div id="quietControl" class="segmented" role="group" aria-label="Quiet mode"></div>
           </section>
           <section class="panel control-stack">
             <div class="panel-head">
@@ -157,7 +157,7 @@
             </div>
             <label>Text <input id="voiceText" type="text" value="Hermes Pets voice preview test."></label>
             <button id="testVoiceBtn" class="secondary" type="button">Run Test</button>
-            <pre id="voiceResult" class="result-box"></pre>
+            <pre id="voiceResult" class="result-box" aria-live="polite"></pre>
           </section>
         </div>
       </section>

@@ -297,6 +297,12 @@ body[data-stale="true"] .refresh-meta {
   background: var(--control-bg-hover);
 }
 
+button:disabled,
+input:disabled {
+  cursor: not-allowed;
+  opacity: 0.58;
+}
+
 button:focus-visible,
 input:focus-visible {
   outline: 2px solid var(--color-focus-ring);
@@ -1032,5 +1038,16 @@ input[type="checkbox"] {
 
   .nav-stack {
     grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.001ms !important;
+    animation-iteration-count: 1 !important;
+    scroll-behavior: auto !important;
+    transition-duration: 0.001ms !important;
   }
 }

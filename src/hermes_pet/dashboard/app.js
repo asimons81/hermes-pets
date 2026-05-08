@@ -37,8 +37,10 @@ function showAlert(message, tone = 'info') {
   const el = $('alert');
   el.textContent = message;
   el.dataset.tone = tone;
+  el.setAttribute('role', tone === 'error' ? 'alert' : 'status');
   el.classList.remove('hidden');
   window.clearTimeout(showAlert.timer);
+  if (tone === 'error') return;
   showAlert.timer = window.setTimeout(() => el.classList.add('hidden'), 4800);
 }
 
@@ -301,7 +303,7 @@ function hydratePrefs(prefs) {
 
 function renderSegmented(id, values, active, onClick) {
   $(id).innerHTML = values.map((value) => `
-    <button type="button" class="${value === active ? 'active' : ''}" data-value="${escapeHtml(value)}">${escapeHtml(value)}</button>
+    <button type="button" class="${value === active ? 'active' : ''}" data-value="${escapeHtml(value)}" aria-pressed="${value === active ? 'true' : 'false'}">${escapeHtml(value)}</button>
   `).join('');
   $(id).querySelectorAll('button').forEach((button) => {
     button.addEventListener('click', () => onClick(button.dataset.value));
