@@ -9,6 +9,7 @@ Commands:
 - ``species``: list all species metadata
 - ``delete``: release the current pet
 - ``launch``: start the bridge and launch the Electron overlay
+- ``update``: safely inspect or update a git checkout install
 - ``custom <path>``: copy a custom PNG sprite into the pet state directory
 - ``message``: emit a local external-message notification
 - ``run -- <command>`` / ``wrap --name <name> -- <command>``: emit job
@@ -95,6 +96,7 @@ from hermes_pet.prefs import (
     save_prefs,
     set_quiet_mode,
 )
+from hermes_pet.update import build_update_parser, current_version, run_update
 
 RARITY_ORDER = {
     "common": 0,
@@ -789,6 +791,10 @@ def _cmd_doctor(args: argparse.Namespace) -> int:
         print("Strict mode: failing because one or more doctor checks warned.")
         return 1
     return 0
+
+
+def _cmd_update(args: argparse.Namespace) -> int:
+    return run_update(args)
 
 
 def _cmd_custom(args: argparse.Namespace) -> int:
@@ -2142,6 +2148,7 @@ def _build_parser() -> argparse.ArgumentParser:
         description="Hermes Pets — a persistent CLI companion.",
         formatter_class=argparse.ArgumentDefaultsHelpFormatter,
     )
+    parser.add_argument("--version", action="version", version=f"%(prog)s {current_version()}")
     subparsers = parser.add_subparsers(dest="command")
 
     status = subparsers.add_parser("status", help="Show full status and stats.")
@@ -2195,6 +2202,10 @@ def _build_parser() -> argparse.ArgumentParser:
         help="Exit non-zero when any doctor check reports a warning.",
     )
     doctor.set_defaults(func=_cmd_doctor)
+
+    update = subparsers.add_parser("update", help="Safely inspect or update this Hermes Pets install.")
+    build_update_parser(update)
+    update.set_defaults(func=_cmd_update)
 
     dashboard = subparsers.add_parser("dashboard", help="Serve the token-protected local dashboard.")
     dashboard.add_argument("--host", default="127.0.0.1", help="Local bind host. Must be localhost.")

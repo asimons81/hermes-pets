@@ -79,6 +79,10 @@ else
 fi
 
 echo
+echo "== update dry-run =="
+"${hermes_pet[@]}" update --dry-run --no-install
+
+echo
 echo "== prefs =="
 "${hermes_pet[@]}" prefs
 

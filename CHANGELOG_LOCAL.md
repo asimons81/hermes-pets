@@ -10,6 +10,12 @@ This file records local implementation milestones and release-candidate notes al
 
 ## Implemented Milestones
 
+## Unreleased - v0.4.0
+
+### Added
+
+- Added guarded `hermes-pet update` command for safe update checks, dry runs, fast-forward-only git updates, dependency refreshes, and validation.
+
 ## v0.3.0 - 2026-05-08
 
 - Released the dashboard milestone as the v0.3.0 public release candidate.

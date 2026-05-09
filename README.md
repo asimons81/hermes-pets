@@ -123,6 +123,62 @@ hermes-pet play
 hermes-pet species
 ```
 
+## Updating Hermes Pets
+
+Use the guarded update command when you want Hermes Pets to inspect or update
+itself without asking you to remember the git, Python packaging, and Electron
+overlay steps by hand:
+
+```bash
+hermes-pet update --check
+hermes-pet update --dry-run
+hermes-pet update
+hermes-pet update --yes
+hermes-pet update --no-install
+hermes-pet update --verbose
+```
+
+`hermes-pet update --check` gathers diagnostics, fetches git metadata for git
+checkout installs, and reports whether the local branch is current, behind,
+ahead, diverged, blocked by local changes, or missing an upstream. It does not
+pull or install dependencies. A cleanly completed check exits successfully; read
+the `Check result` and git status lines to distinguish current, update
+available, and blocked states.
+
+`hermes-pet update --dry-run` prints the planned fetch, comparison,
+fast-forward-only update, dependency refresh, and validation steps without
+mutating files. A normal `hermes-pet update` only updates git checkout installs
+that have a clean working tree and a configured upstream branch. If an update is
+available, interactive shells ask for confirmation; non-interactive shells must
+pass `--yes` or `-y`.
+
+Dirty working trees are blocked. The command will not merge, rebase, hard reset,
+or auto-stash. Unknown install modes get diagnostics and manual guidance instead
+of risky changes. Git checkout installs get the safest automatic path: fetch,
+compare, fast-forward only, refresh dependencies when appropriate, then run
+lightweight validation.
+
+Dependency refreshes use the current Python executable and the overlay package
+manager selected by lockfile: `pnpm-lock.yaml`, `yarn.lock`,
+`package-lock.json`, then `npm install` when no lockfile is present.
+`--no-install` skips both Python and Electron overlay dependency refresh and
+prints the commands you can run manually.
+
+`--verbose` adds extra install diagnostics, including recorded package source
+metadata when Python packaging made it available. It still does not inspect or
+write pet state.
+
+Install diagnostics identify the Python executable, Python environment, package
+location, editable status, recorded package source when available, git checkout
+state, overlay dependency state, package manager availability, and Python
+packaging files. Automatic git updates are only enabled when the running package
+resolves to the repo source package, not merely because a virtual environment
+lives somewhere inside a git checkout.
+
+The update command never modifies `~/.hermes_pet`. It does not migrate, reset,
+rewrite, delete, or back up pet state. If you need a backup, copy the real
+`~/.hermes_pet` directory.
+
 ## Local Dashboard and Achievements
 
 v0.3.0 adds a local dashboard:
@@ -748,6 +804,25 @@ hermes-pet prefs
 hermes-pet jobs --last
 hermes-pet brief --since 24h
 ```
+
+For update issues, start with a non-mutating check:
+
+```bash
+hermes-pet update --check
+hermes-pet update --dry-run --no-install
+```
+
+If fetch fails, check your network and remote access, then rerun
+`hermes-pet update --check`. If fast-forward fails, inspect `git status` and
+`git log --oneline --graph --decorate --all`; Hermes Pets will not merge,
+rebase, hard reset, or auto-stash for you. If dependency refresh fails, rerun
+the printed Python or overlay install command after installing the missing
+package manager or fixing the reported tool error. If validation fails, rerun
+`hermes-pet --version` and then decide whether to reinstall from the same source
+or recover the git checkout manually.
+
+Backups for update recovery should copy the real `~/.hermes_pet` directory.
+`hermes-pet state export` is useful diagnostic output, not a restorable backup.
 
 ## Contributing
 
