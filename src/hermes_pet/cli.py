@@ -527,6 +527,52 @@ def _overlay_launcher_script() -> Path:
     return _overlay_dir() / "scripts" / "launch-windows-overlay.ps1"
 
 
+def _find_overlay_processes() -> list[int]:
+    """Find overlay Electron processes by their window title or command line."""
+    import re
+    try:
+        if sys.platform == "win32":
+            # Windows - use wmic
+            result = subprocess.run(
+                ["wmic", "process", "where", "name='electron.exe'", "get", "processid,commandline", "/value"],
+                capture_output=True, text=True, check=True
+            )
+            pids = []
+            current_section = ""
+            for line in result.stdout.splitlines():
+                line = line.strip()
+                if line:
+                    current_section += line + "\n"
+                elif current_section:
+                    if "Hermes Pets Overlay" in current_section or ("electron" in current_section and "src/main.js" in current_section):
+                        match = re.search(r"ProcessId=(\d+)", current_section)
+                        if match:
+                            pids.append(int(match.group(1)))
+                    current_section = ""
+            return pids
+        elif sys.platform == "darwin" or sys.platform.startswith("linux"):
+            # macOS/Linux - use ps
+            result = subprocess.run(
+                ["ps", "-eo", "pid=,args="],
+                capture_output=True, text=True, check=True
+            )
+            pids = []
+            for line in result.stdout.splitlines():
+                stripped = line.strip()
+                if not stripped:
+                    continue
+                if "Hermes Pets Overlay" in stripped or ("electron" in stripped and "src/main.js" in stripped):
+                    pid_text, _, _ = stripped.partition(" ")
+                    try:
+                        pids.append(int(pid_text.strip()))
+                    except ValueError:
+                        continue
+            return pids
+    except Exception:
+        pass
+    return []
+
+
 def _run_overlay_launcher(*, port: int, mode: str) -> subprocess.CompletedProcess[str]:
     if not (_is_wsl() or sys.platform == "win32"):
         raise PetCLIError("Windows overlay process control is only available from Windows/WSL.")
@@ -579,15 +625,25 @@ def _cmd_overlay_status(_: argparse.Namespace) -> int:
     available = bridge_mod.is_bridge_available(port=port, host=host)
     print(f"Bridge: {'available' if available else 'unavailable'} at ws://{host}:{port}")
 
+    # Try Windows launcher first if applicable
     try:
         result = _run_overlay_launcher(port=port, mode="status")
-    except PetCLIError as exc:
-        print(f"Overlay processes: {exc}")
-        return 0
-
-    _print_completed_process(result)
-    if result.returncode != 0:
-        print(f"Overlay processes: status check exited with code {result.returncode}")
+        _print_completed_process(result)
+        if result.returncode != 0:
+            print(f"Overlay processes: status check exited with code {result.returncode}")
+    except PetCLIError:
+        # Fall back to cross-platform process detection
+        overlay_pids = _find_overlay_processes()
+        bridge_pids = _bridge_process_ids(port)
+        
+        print(f"Overlay processes: {len(overlay_pids)} found")
+        if overlay_pids:
+            print(f"  PIDs: {', '.join(map(str, overlay_pids))}")
+        
+        print(f"Bridge processes: {len(bridge_pids)} found")
+        if bridge_pids:
+            print(f"  PIDs: {', '.join(map(str, bridge_pids))}")
+    
     return 0
 
 
@@ -654,11 +710,29 @@ def _cmd_close(args: argparse.Namespace) -> int:
     bridge_mod = importlib.import_module("hermes_pet.bridge")
     port = _resolve_bridge_port(bridge_mod)
 
-    result = _run_overlay_launcher(port=port, mode="stop")
-    _print_completed_process(result)
-    if result.returncode != 0:
-        print(f"Overlay close exited with code {result.returncode}")
-        return result.returncode
+    # Try Windows launcher first if applicable
+    try:
+        result = _run_overlay_launcher(port=port, mode="stop")
+        _print_completed_process(result)
+        if result.returncode != 0:
+            print(f"Overlay close exited with code {result.returncode}")
+    except PetCLIError:
+        # Fall back to cross-platform process termination
+        overlay_pids = _find_overlay_processes()
+        if overlay_pids:
+            print(f"Stopping overlay processes: {', '.join(map(str, overlay_pids))}")
+            for pid in overlay_pids:
+                try:
+                    os.kill(pid, signal.SIGTERM)
+                except ProcessLookupError:
+                    continue
+                except OSError as exc:
+                    print(f"⚠️ Could not stop overlay process {pid}: {exc}", file=sys.stderr)
+            
+            # Give some time for processes to terminate
+            time.sleep(0.5)
+        else:
+            print("No overlay processes found")
 
     if getattr(args, "bridge", False):
         stopped = _stop_bridge_processes(port)
@@ -728,7 +802,15 @@ def _cmd_doctor(args: argparse.Namespace) -> int:
     checks.append(_doctor_line("overlay dir", overlay_dir.is_dir(), str(overlay_dir)))
     checks.append(_doctor_line("overlay launcher", launcher.is_file(), str(launcher)))
     if not (_is_wsl() or sys.platform == "win32"):
-        checks.append(_doctor_line("overlay-status", True, "Windows overlay process query not available on this OS"))
+        # For macOS/Linux, check if we can detect processes
+        try:
+            overlay_pids = _find_overlay_processes()
+            checks.append(_doctor_line(
+                "overlay-status", True, 
+                f"cross-platform process detection available ({len(overlay_pids)} overlay processes found)"
+            ))
+        except Exception as e:
+            checks.append(_doctor_line("overlay-status", False, f"cross-platform process detection failed: {e}"))
     elif not launcher.is_file():
         checks.append(_doctor_line("overlay-status", False, "launcher script missing"))
     else:
