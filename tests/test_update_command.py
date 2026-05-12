@@ -412,3 +412,39 @@ def test_cli_update_entrypoint_wires_parser_flags(monkeypatch: pytest.MonkeyPatc
         "no_install": True,
         "verbose": True,
     }
+
+
+def test_stale_editable_metadata_prefers_pyproject_source_truth(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    """If the installed distribution metadata is stale (e.g. 0.1.0) but the
+    checkout pyproject.toml is newer (e.g. 0.4.0), current_version() must
+    return the source truth, not the stale metadata."""
+    repo = tmp_path / "repo"
+    package_dir = _write_project_files(repo)
+
+    def stale_metadata_version(name: str) -> str:
+        return "0.1.0"
+
+    monkeypatch.setattr(update.metadata, "version", stale_metadata_version)
+
+    version = update.current_version(package_dir)
+    assert version == "0.4.0", f"expected source truth 0.4.0, got stale metadata {version}"
+
+
+def test_current_version_falls_back_to_metadata_when_no_pyproject(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """When there is no pyproject.toml near the package, current_version()
+    falls back to importlib.metadata.version."""
+    package_dir = tmp_path / "no_pyproject_here"
+    package_dir.mkdir()
+
+    def fake_metadata_version(name: str) -> str:
+        return "0.5.0"
+
+    monkeypatch.setattr(update.metadata, "version", fake_metadata_version)
+    # Ensure CWD has no pyproject.toml so the candidate scan falls through.
+    monkeypatch.setattr("pathlib.Path.cwd", lambda: tmp_path)
+
+    version = update.current_version(package_dir)
+    assert version == "0.5.0"

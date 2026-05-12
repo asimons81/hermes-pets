@@ -64,18 +64,44 @@ fi
 
 echo "== Hermes Pets smoke =="
 if [ "$temp_state" -eq 1 ]; then
-  echo "state: $HERMES_PET_HOME"
+  echo "state: temp ($HERMES_PET_HOME)"
 fi
 
-if ! command -v hermes-pet >/dev/null 2>&1; then
-  if PYTHONPATH="$repo_root/src${PYTHONPATH:+:$PYTHONPATH}" "$python_bin" -m hermes_pet.cli --help >/dev/null 2>&1; then
-    hermes_pet=(env PYTHONPATH="$repo_root/src${PYTHONPATH:+:$PYTHONPATH}" "$python_bin" -m hermes_pet.cli)
-  else
-    echo "hermes-pet command not found on PATH" >&2
-    exit 127
+# ── Version evidence ──────────────────────────────────────────────
+path_version=""
+source_version=""
+
+if command -v hermes-pet >/dev/null 2>&1; then
+  path_version="$(hermes-pet --version 2>/dev/null || true)"
+fi
+
+if PYTHONPATH="$repo_root/src${PYTHONPATH:+:$PYTHONPATH}" "$python_bin" -m hermes_pet.cli --help >/dev/null 2>&1; then
+  source_version="$(env PYTHONPATH="$repo_root/src${PYTHONPATH:+:$PYTHONPATH}" "$python_bin" -m hermes_pet.cli --version 2>/dev/null || true)"
+fi
+
+if [ -n "$path_version" ]; then
+  echo "PATH command:    $path_version"
+fi
+if [ -n "$source_version" ]; then
+  echo "source module:   $source_version"
+fi
+
+if [ -n "$path_version" ] && [ -n "$source_version" ]; then
+  if [ "$path_version" != "$source_version" ]; then
+    echo "WARNING: installed version does not match source checkout" >&2
   fi
-else
+fi
+
+# ── Command resolution ────────────────────────────────────────────
+if [ -n "$path_version" ]; then
   hermes_pet=(hermes-pet)
+  echo "using:          PATH command (hermes-pet)"
+elif [ -n "$source_version" ]; then
+  hermes_pet=(env PYTHONPATH="$repo_root/src${PYTHONPATH:+:$PYTHONPATH}" "$python_bin" -m hermes_pet.cli)
+  echo "using:          source module (python3 -m hermes_pet.cli)"
+else
+  echo "hermes-pet command not found on PATH and source module failed" >&2
+  exit 127
 fi
 
 echo
@@ -93,7 +119,11 @@ echo "== doctor =="
 echo
 echo "== emit bubble =="
 if ! "${hermes_pet[@]}" emit bubble "Hermes Pets smoke check"; then
-  echo "emit failed; launch the overlay with: hermes-pet launch" >&2
+  if [ "$temp_state" -eq 1 ]; then
+    echo "emit failed (expected in temp-state mode; overlay not created in isolated home)" >&2
+  else
+    echo "emit failed; launch the overlay with: hermes-pet launch" >&2
+  fi
 fi
 
 echo

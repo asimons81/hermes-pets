@@ -137,28 +137,39 @@ def _print_kv(label: str, value: object, out: TextIO) -> None:
     print(f"{label}: {value}", file=out)
 
 
+def _read_pyproject_version(path: Path) -> str | None:
+    if not path.is_file():
+        return None
+    text = path.read_text(encoding="utf-8", errors="ignore")
+    for raw_line in text.splitlines():
+        line = raw_line.strip()
+        if line.startswith("version"):
+            _, _, value = line.partition("=")
+            value = value.strip().strip('"').strip("'")
+            if value:
+                return value
+    return None
+
+
 def current_version(package_dir: Path | None = None) -> str:
+    package_dir = Path(package_dir or __file__).resolve()
+    # Prefer source truth when inside a checkout (editable or source run).
+    # The repo root is two levels above src/hermes_pet/update.py.
+    candidates: list[Path] = []
+    if len(package_dir.parents) >= 3:
+        candidates.append(package_dir.parents[2] / "pyproject.toml")
+    candidates.append(Path.cwd() / "pyproject.toml")
+
+    for candidate in candidates:
+        version = _read_pyproject_version(candidate)
+        if version is not None:
+            return version
+
     try:
         return metadata.version(PACKAGE_NAME)
     except metadata.PackageNotFoundError:
         pass
 
-    package_dir = Path(package_dir or __file__).resolve()
-    candidates = [
-        package_dir.parents[2] / "pyproject.toml" if len(package_dir.parents) >= 3 else None,
-        Path.cwd() / "pyproject.toml",
-    ]
-    for candidate in candidates:
-        if candidate is None or not candidate.is_file():
-            continue
-        text = candidate.read_text(encoding="utf-8", errors="ignore")
-        for raw_line in text.splitlines():
-            line = raw_line.strip()
-            if line.startswith("version"):
-                _, _, value = line.partition("=")
-                value = value.strip().strip('"').strip("'")
-                if value:
-                    return value
     return "unknown"
 
 

@@ -10,11 +10,19 @@ This file records local implementation milestones and release-candidate notes al
 
 ## Implemented Milestones
 
-## Unreleased - v0.4.0
+## v0.4.0 - 2026-05-11
 
 ### Added
 
 - Added guarded `hermes-pet update` command for safe update checks, dry runs, fast-forward-only git updates, dependency refreshes, and validation.
+
+### Fixed
+
+- Fixed version reporting for editable git checkout installs by preferring repo/source `pyproject.toml` over stale installed distribution metadata.
+
+### Changed
+
+- Improved `scripts/smoke-hermes-pet.sh` evidence output so release checks show PATH CLI version, source checkout version, selected command path, and temp-state behavior clearly.
 
 ## v0.3.0 - 2026-05-08
 
