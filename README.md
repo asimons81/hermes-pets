@@ -84,7 +84,7 @@ cd /home/tony/projects/hermes-pet
 pip install .
 ```
 
-Editable installs use the repo-local `overlay/` directory. Non-editable installs use the packaged overlay assets and copy them to `~/.hermes_pet/cache/overlay` when a real filesystem path is needed for Electron or the Windows PowerShell launcher.
+Editable installs use the repo-local `overlay/` directory as source. On WSL/Windows, the PowerShell launcher mirrors that overlay into `%LOCALAPPDATA%\HermesAgent\pet-overlay-electron\app-<port>` before starting Electron, so the Windows process reads renderer files from a native Windows path instead of a flaky WSL UNC path. Non-editable installs use the packaged overlay assets and copy them to `~/.hermes_pet/cache/overlay` before the Windows launcher mirrors them into the same Electron cache.
 
 The Python package exposes:
 
@@ -279,7 +279,7 @@ Start the bridge and launch the overlay:
 hermes-pet launch
 ```
 
-On WSL/Windows, `launch` uses `overlay/scripts/launch-windows-overlay.ps1`. That launcher keeps the Electron install in `%LOCALAPPDATA%\HermesAgent\pet-overlay-electron`, reuses an existing overlay when one is already running, and points it at `ws://127.0.0.1:17473` by default.
+On WSL/Windows, `launch` uses `overlay/scripts/launch-windows-overlay.ps1`. That launcher keeps the Electron install and mirrored overlay app under `%LOCALAPPDATA%\HermesAgent\pet-overlay-electron`, reuses an existing overlay when one is already running, and points it at `ws://127.0.0.1:17473` by default.
 
 The launch boundary is:
 
@@ -289,6 +289,7 @@ WSL shell
   -> Python bridge in WSL on ws://127.0.0.1:17473
   -> Windows PowerShell launcher
   -> Electron dependency cache in %LOCALAPPDATA%\HermesAgent\pet-overlay-electron
+  -> mirrored overlay app in %LOCALAPPDATA%\HermesAgent\pet-overlay-electron\app-17473
   -> floating Windows overlay
 ```
 
@@ -328,6 +329,7 @@ Useful environment variables:
 - `HERMES_PET_HOST`: bridge host, default `127.0.0.1`.
 - `HERMES_PET_WS_URL`: explicit overlay bridge URL.
 - `HERMES_PET_POSITION_FILE`: overlay window position file.
+- `HERMES_PET_ELECTRON_USER_DATA`: advanced/testing override for Electron user-data isolation.
 - `HERMES_PET_SPECIES`: overlay species, default `cat`.
 - `HERMES_PET_PROJECT_ID`, `HERMES_PET_PROJECT_PATH`: default structured project context for emitted events.
 - `HERMES_PET_SESSION_ID`, `HERMES_PET_SESSION_LABEL`: default structured session context for emitted events.
@@ -761,7 +763,7 @@ It checks prefs, runs doctor, emits a bubble, wraps one successful command, wrap
 Hermes Pets is currently tuned for WSL driving a Windows Electron overlay.
 
 - Run CLI commands from WSL.
-- Editable installs use the repo-local `overlay/` directory; non-editable installs use the packaged overlay cached under `~/.hermes_pet/cache/overlay`.
+- Editable installs use the repo-local `overlay/` as source. WSL/Windows launch mirrors the active overlay into `%LOCALAPPDATA%\HermesAgent\pet-overlay-electron\app-<port>` before starting Electron; non-editable installs first use packaged overlay assets cached under `~/.hermes_pet/cache/overlay`.
 - `hermes-pet launch` starts the Python bridge in WSL and launches Electron through PowerShell on Windows.
 - `hermes-pet launch --replace` is the recovery path for duplicate or stale overlays.
 - The Windows overlay dependencies are cached under `%LOCALAPPDATA%\HermesAgent\pet-overlay-electron`.

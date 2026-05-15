@@ -10,6 +10,21 @@ This file records local implementation milestones and release-candidate notes al
 
 ## Implemented Milestones
 
+## v0.4.1 - 2026-05-14
+
+### Fixed
+
+- Prepared a corrective release after the public v0.4.0 release-readiness audit found stale lockfile and release-lifecycle issues.
+- Regenerated `uv.lock` so package metadata and lockfile version surfaces agree on `0.4.1`.
+- Hardened WSL/Windows overlay shutdown so already-dead or slow-exiting Electron processes do not make cleanup fail spuriously.
+- Hardened WSL/Windows overlay launch by mirroring renderer files into the Windows Electron cache before launch instead of running Electron directly against WSL UNC paths.
+- Added bounded retry to the live overlay verifier for transient Windows/Electron startup and teardown races while still failing after repeated verifier failures.
+- Improved update diagnostics so inherited `VIRTUAL_ENV` mismatches are reported instead of replacing the Python executable-derived environment truth.
+
+### Changed
+
+- Refreshed release-readiness docs with an accurate v0.4.1 corrective-release checklist and release-note draft.
+
 ## v0.4.0 - 2026-05-11
 
 ### Added

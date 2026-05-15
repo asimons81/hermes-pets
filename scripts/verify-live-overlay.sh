@@ -24,6 +24,20 @@ if ! command -v wslpath >/dev/null 2>&1; then
   exit 0
 fi
 
+if [[ -z "${HERMES_PET_LIVE_OVERLAY_ATTEMPT:-}" ]]; then
+  for attempt in 1 2 3; do
+    echo "live overlay verifier: attempt $attempt/3"
+    if HERMES_PET_LIVE_OVERLAY_ATTEMPT="$attempt" "$0"; then
+      exit 0
+    fi
+    echo "live overlay verifier: attempt $attempt failed; cleaning up before retry" >&2
+    "$python_bin" -m hermes_pet.cli close --bridge >/dev/null 2>&1 || true
+    sleep 2
+  done
+  echo "failure: live overlay verifier failed after 3 attempts" >&2
+  exit 1
+fi
+
 tmp_dir="$(mktemp -d)"
 verify_dir="$tmp_dir"
 if [[ -d /mnt/c/tmp && -w /mnt/c/tmp ]]; then
@@ -57,7 +71,8 @@ PY
 )"
 
 verify_log_windows="$(wslpath -w "$verify_log")"
-export WSLENV="HERMES_PET_OVERLAY_VERIFY_FILE:HERMES_PET_DEBUG_EVENTS${WSLENV:+:$WSLENV}"
+user_data_windows="$(wslpath -w "$verify_dir/electron-user-data")"
+export WSLENV="HERMES_PET_OVERLAY_VERIFY_FILE:HERMES_PET_ELECTRON_USER_DATA:HERMES_PET_DEBUG_EVENTS${WSLENV:+:$WSLENV}"
 mkdir -p "$home_dir" "$custom_src/sprites/idle"
 cp "$repo_root/overlay/assets/sprites/cat/idle/idle_00.png" "$custom_src/sprites/idle/idle_00.png"
 
@@ -124,6 +139,7 @@ run_cli custom-pet use live-overlay-fallback >/dev/null
 HERMES_PET_PORT="$port" \
 HERMES_PET_DEBUG_EVENTS=1 \
 HERMES_PET_OVERLAY_VERIFY_FILE="$verify_log_windows" \
+HERMES_PET_ELECTRON_USER_DATA="$user_data_windows" \
 HERMES_PET_POSITION_FILE="$position_file" \
 "$python_bin" -m hermes_pet.cli launch --replace
 

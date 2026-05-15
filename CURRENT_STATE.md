@@ -1,6 +1,6 @@
 # Hermes Pets Current State
 
-Snapshot date: 2026-05-11
+Snapshot date: 2026-05-14
 
 ## What Works
 
@@ -8,6 +8,7 @@ Snapshot date: 2026-05-11
 - Pet state persists under `~/.hermes_pet` by default.
 - `hermes-pet launch` starts the bridge and launches the Electron overlay.
 - `hermes-pet launch --replace` stops existing Windows overlay process trees before starting a fresh overlay.
+- On WSL/Windows, the launcher mirrors the overlay app into `%LOCALAPPDATA%\HermesAgent\pet-overlay-electron\app-<port>` so Electron reads renderer files from a native Windows path rather than a WSL UNC path.
 - Overlay movement, saved position, visible sprite bounds, and reconnect behavior are in place.
 - Ambient events can be emitted with `hermes-pet emit`.
 - Local commands can be wrapped with `wrap` or `run`.
@@ -46,6 +47,7 @@ Snapshot date: 2026-05-11
 - Bash helpers and a smoke script are available for daily operation.
 - A temp-state smoke mode and a fresh GitHub install smoke script are available for release confidence.
 - WSL2/Windows with Windows interop is the supported full-overlay platform; native Linux, macOS, and native Windows are documented as investigation targets only.
+- v0.4.1 corrective release candidate fixes v0.4.0 release hygiene, lockfile/version coherence, update diagnostics, and live overlay cleanup reliability. It still needs Tony approval, push/merge, and final tag/release steps.
 
 ## Key Commands
 
@@ -127,6 +129,7 @@ hpbrief
 - `scripts/smoke-hermes-pet.sh`: smoke verification script.
 - `scripts/smoke-renderer.js`: dependency-free renderer behavior smoke check.
 - `scripts/smoke-github-install.sh`: fresh virtualenv install smoke for the public GitHub install path.
+- `scripts/verify-live-overlay.sh`: WSL/Windows live Electron overlay verifier with bounded retry for transient Electron startup/teardown races.
 - `scripts/validate-custom-pet.py`: custom pet package validator.
 - `scripts/package-custom-pet.py`: custom pet package helper for hatch runs and built-in fixtures.
 - `.codex/skills/hermes-pet-hatch/SKILL.md`: Hermes-specific custom pet creation workflow.
@@ -140,7 +143,7 @@ hpbrief
 ## Known Limitations
 
 - The full overlay path is supported on WSL2/Windows with Windows interop. Native Linux, macOS, and native Windows are not supported full-overlay platforms in Phase 5.
-- Editable installs use the repo-local `overlay/`; non-editable installs use packaged overlay assets cached under `~/.hermes_pet/cache/overlay`.
+- Editable installs use the repo-local `overlay/` as source; WSL/Windows launch mirrors the active overlay source into the Windows Electron cache before launch. Non-editable installs use packaged overlay assets cached under `~/.hermes_pet/cache/overlay` first.
 - The bridge must be reachable for live overlay events; local event/job history still records when the bridge is unavailable.
 - Custom pet `idle` is required; missing optional states rely on renderer fallback behavior.
 - Custom pet selection is local state only and does not add the pet to built-in gacha species metadata.
@@ -155,8 +158,7 @@ hpbrief
 
 ## Next Recommended Improvements
 
-- Use the `v0.3.0` release as the baseline for the next platform and packaging
-  milestone; keep any PyPI upload or installer work as an explicit future task.
+- Use the `v0.4.1` corrective release as the next trust baseline once the final validation stack passes; keep any PyPI upload or installer work as an explicit future task.
 - Expand automated CLI tests around parser behavior, wrapped command execution, and brief formatting.
 - Add deeper live overlay checks for drag ergonomics, always-on-top behavior, and multi-monitor/DPI setups.
 - Add richer custom pet preview controls such as playback speed and side-by-side state comparison.

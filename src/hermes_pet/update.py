@@ -174,18 +174,34 @@ def current_version(package_dir: Path | None = None) -> str:
 
 
 def _python_environment_hint(executable: Path) -> str:
+    # Keep the syntactic executable path for venv detection. Resolving first can
+    # follow .venv/bin/python symlinks back to the base interpreter and erase the
+    # actual environment the user invoked.
+    executable = executable.expanduser()
+    if not executable.is_absolute():
+        executable = executable.absolute()
     text = str(executable)
+    inherited_virtual_env = os.environ.get("VIRTUAL_ENV", "").strip()
+
+    def with_inherited_mismatch(label: str, actual_env: Path | None) -> str:
+        if not inherited_virtual_env:
+            return label
+        inherited = Path(inherited_virtual_env).expanduser().resolve()
+        if actual_env is not None and inherited == actual_env.resolve():
+            return label
+        return f"{label}; inherited VIRTUAL_ENV differs ({inherited_virtual_env})"
+
     if "/.local/share/uv/tools/" in text:
-        return "uv tool environment"
+        return with_inherited_mismatch("uv tool environment", executable.parent.parent)
     if "/.local/pipx/venvs/" in text or "\\pipx\\venvs\\" in text:
-        return "pipx environment"
-    virtual_env = os.environ.get("VIRTUAL_ENV")
-    if virtual_env:
-        return f"virtual environment ({virtual_env})"
+        return with_inherited_mismatch("pipx environment", executable.parent.parent)
     if executable.parent.name in {"bin", "Scripts"}:
         parent = executable.parent.parent
         if (parent / "pyvenv.cfg").is_file():
-            return f"virtual environment ({parent})"
+            return with_inherited_mismatch(f"virtual environment ({parent})", parent)
+    virtual_env = os.environ.get("VIRTUAL_ENV")
+    if virtual_env:
+        return f"system or unknown Python environment; inherited VIRTUAL_ENV set ({virtual_env})"
     return "system or unknown Python environment"
 
 

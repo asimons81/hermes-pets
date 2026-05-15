@@ -38,7 +38,7 @@ def _write_project_files(repo: Path) -> Path:
                 "",
                 "[project]",
                 'name = "hermes-pet"',
-                'version = "0.3.0"',
+                'version = "0.4.1"',
             ]
         ),
         encoding="utf-8",
@@ -416,7 +416,7 @@ def test_cli_update_entrypoint_wires_parser_flags(monkeypatch: pytest.MonkeyPatc
 
 def test_stale_editable_metadata_prefers_pyproject_source_truth(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
     """If the installed distribution metadata is stale (e.g. 0.1.0) but the
-    checkout pyproject.toml is newer (e.g. 0.4.0), current_version() must
+    checkout pyproject.toml is newer (e.g. 0.4.1), current_version() must
     return the source truth, not the stale metadata."""
     repo = tmp_path / "repo"
     package_dir = _write_project_files(repo)
@@ -427,7 +427,7 @@ def test_stale_editable_metadata_prefers_pyproject_source_truth(tmp_path: Path, 
     monkeypatch.setattr(update.metadata, "version", stale_metadata_version)
 
     version = update.current_version(package_dir)
-    assert version == "0.4.0", f"expected source truth 0.4.0, got stale metadata {version}"
+    assert version == "0.4.1", f"expected source truth 0.4.1, got stale metadata {version}"
 
 
 def test_current_version_falls_back_to_metadata_when_no_pyproject(
@@ -448,3 +448,66 @@ def test_current_version_falls_back_to_metadata_when_no_pyproject(
 
     version = update.current_version(package_dir)
     assert version == "0.5.0"
+
+
+def test_python_environment_hint_prefers_executable_venv_over_inherited_mismatch(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    project_venv = tmp_path / "project" / ".venv"
+    executable = project_venv / "bin" / "python"
+    executable.parent.mkdir(parents=True)
+    executable.write_text("", encoding="utf-8")
+    (project_venv / "pyvenv.cfg").write_text("home = /usr/bin\n", encoding="utf-8")
+    inherited = tmp_path / "wrong-hermes-venv"
+    monkeypatch.setenv("VIRTUAL_ENV", str(inherited))
+
+    hint = update._python_environment_hint(executable)
+
+    assert f"virtual environment ({project_venv.resolve()})" in hint
+    assert f"inherited VIRTUAL_ENV differs ({inherited})" in hint
+
+
+def test_python_environment_hint_reports_matching_project_venv(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    project_venv = tmp_path / "project" / ".venv"
+    executable = project_venv / "bin" / "python"
+    executable.parent.mkdir(parents=True)
+    executable.write_text("", encoding="utf-8")
+    (project_venv / "pyvenv.cfg").write_text("home = /usr/bin\n", encoding="utf-8")
+    monkeypatch.setenv("VIRTUAL_ENV", str(project_venv))
+
+    assert update._python_environment_hint(executable) == f"virtual environment ({project_venv.resolve()})"
+
+
+def test_python_environment_hint_reports_uv_tool_with_inherited_mismatch(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    executable = tmp_path / ".local" / "share" / "uv" / "tools" / "hermes-pet" / "bin" / "python"
+    executable.parent.mkdir(parents=True)
+    executable.write_text("", encoding="utf-8")
+    inherited = tmp_path / "wrong-env"
+    monkeypatch.setenv("VIRTUAL_ENV", str(inherited))
+
+    hint = update._python_environment_hint(executable)
+
+    assert hint.startswith("uv tool environment")
+    assert f"inherited VIRTUAL_ENV differs ({inherited})" in hint
+
+
+def test_python_environment_hint_reports_standalone_executable_and_inherited_env(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    executable = tmp_path / "bin" / "python"
+    executable.parent.mkdir(parents=True)
+    executable.write_text("", encoding="utf-8")
+    inherited = tmp_path / "ambient-env"
+    monkeypatch.setenv("VIRTUAL_ENV", str(inherited))
+
+    hint = update._python_environment_hint(executable)
+
+    assert hint == f"system or unknown Python environment; inherited VIRTUAL_ENV set ({inherited})"
