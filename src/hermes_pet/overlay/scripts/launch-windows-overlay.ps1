@@ -18,19 +18,44 @@ $ErrorActionPreference = "Stop"
 $cacheRoot = Join-Path $env:LOCALAPPDATA "HermesAgent\pet-overlay-electron"
 $packageJson = Join-Path $cacheRoot "package.json"
 $electronCmd = Join-Path $cacheRoot "node_modules\.bin\electron.cmd"
-$mainJs = Join-Path $RepoPath "src\main.windows.js"
+$appRoot = Join-Path $cacheRoot "app-$Port"
+$sourceMainJs = Join-Path $RepoPath "src\main.windows.js"
+$mainJs = Join-Path $appRoot "src\main.windows.js"
 
-if (-not (Test-Path $mainJs)) {
-  throw "Windows overlay entrypoint not found: $mainJs"
+if (-not (Test-Path $sourceMainJs)) {
+  throw "Windows overlay entrypoint not found: $sourceMainJs"
 }
 
 function Get-HermesOverlayProcesses {
-  $targetMain = [System.IO.Path]::GetFullPath($mainJs)
+  $targetMains = @(
+    [System.IO.Path]::GetFullPath($mainJs),
+    [System.IO.Path]::GetFullPath($sourceMainJs)
+  )
+  $cacheAppPrefix = [System.IO.Path]::GetFullPath((Join-Path $cacheRoot "app-"))
+  $cacheRootFull = [System.IO.Path]::GetFullPath($cacheRoot)
   Get-CimInstance Win32_Process |
     Where-Object {
-      $_.Name -ieq "electron.exe" -and
-      $_.CommandLine -and
-      $_.CommandLine.IndexOf($targetMain, [System.StringComparison]::OrdinalIgnoreCase) -ge 0
+      $cmdLine = $_.CommandLine
+      if ($_.Name -ine "electron.exe" -or -not $cmdLine) {
+        $false
+      } else {
+        $matched = $false
+        foreach ($targetMain in $targetMains) {
+          if ($cmdLine.IndexOf($targetMain, [System.StringComparison]::OrdinalIgnoreCase) -ge 0) {
+            $matched = $true
+          }
+        }
+        if ($cmdLine.IndexOf($cacheRootFull, [System.StringComparison]::OrdinalIgnoreCase) -ge 0) {
+          $matched = $true
+        }
+        if (
+          $cmdLine.IndexOf($cacheAppPrefix, [System.StringComparison]::OrdinalIgnoreCase) -ge 0 -and
+          $cmdLine.IndexOf("src\main.windows.js", [System.StringComparison]::OrdinalIgnoreCase) -ge 0
+        ) {
+          $matched = $true
+        }
+        $matched
+      }
     } |
     Sort-Object ProcessId
 }
@@ -65,6 +90,77 @@ function Stop-HermesOverlayTree {
   }
 }
 
+function Wait-HermesOverlayExit {
+  param([int]$TimeoutSeconds = 6)
+
+  $deadline = (Get-Date).AddSeconds($TimeoutSeconds)
+  do {
+    $remaining = @(Get-HermesOverlayProcesses)
+    if ($remaining.Count -eq 0) {
+      return $true
+    }
+    Start-Sleep -Milliseconds 250
+  } while ((Get-Date) -lt $deadline)
+
+  return (@(Get-HermesOverlayProcesses).Count -eq 0)
+}
+
+function Stop-HermesOverlayProcesses {
+  param([Parameter(Mandatory = $true)] [object[]]$Roots)
+
+  $current = @($Roots)
+  if ($current.Count -eq 0) {
+    return $true
+  }
+
+  for ($attempt = 1; $attempt -le 3; $attempt++) {
+    Stop-HermesOverlayTree -Roots $current
+    if (Wait-HermesOverlayExit -TimeoutSeconds 6) {
+      return $true
+    }
+    $current = @(Get-HermesOverlayProcesses)
+    if ($current.Count -eq 0) {
+      return $true
+    }
+    Write-Warning "Hermes overlay process(es) still exiting after stop attempt $attempt`: $($current.ProcessId -join ', ')"
+  }
+
+  return $false
+}
+
+function Sync-HermesOverlayApp {
+  if (Test-Path $appRoot) {
+    $removed = $false
+    for ($attempt = 1; $attempt -le 10; $attempt++) {
+      try {
+        Remove-Item -Recurse -Force $appRoot -ErrorAction Stop
+        $removed = $true
+        break
+      } catch {
+        if ($attempt -eq 10) {
+          throw
+        }
+        Start-Sleep -Milliseconds 500
+      }
+    }
+    if (-not $removed -and (Test-Path $appRoot)) {
+      throw "Could not refresh cached overlay app: $appRoot"
+    }
+  }
+  New-Item -ItemType Directory -Path $appRoot | Out-Null
+
+  foreach ($name in @("package.json", "src", "assets", "scripts")) {
+    $source = Join-Path $RepoPath $name
+    if (Test-Path $source) {
+      Copy-Item -Path $source -Destination $appRoot -Recurse -Force
+    }
+  }
+
+  if (-not (Test-Path $mainJs)) {
+    throw "Cached Windows overlay entrypoint was not created: $mainJs"
+  }
+}
+
 $existing = @(Get-HermesOverlayProcesses)
 
 if ($Status) {
@@ -88,8 +184,7 @@ if ($Stop) {
   }
 
   Write-Output "Stopping Hermes Windows pet overlay process tree(s): $($existing.ProcessId -join ', ')"
-  Stop-HermesOverlayTree -Roots $existing
-  Start-Sleep -Milliseconds 500
+  $stopped = Stop-HermesOverlayProcesses -Roots $existing
   $existing = @(Get-HermesOverlayProcesses)
   if ($existing.Count -gt 0) {
     throw "Could not stop existing Hermes overlay process(es): $($existing.ProcessId -join ', ')"
@@ -101,8 +196,7 @@ if ($Stop) {
 
 if ($existing.Count -gt 0 -and $Replace) {
   Write-Output "Stopping existing Hermes Windows pet overlay process tree(s): $($existing.ProcessId -join ', ')"
-  Stop-HermesOverlayTree -Roots $existing
-  Start-Sleep -Milliseconds 500
+  $stopped = Stop-HermesOverlayProcesses -Roots $existing
   $existing = @(Get-HermesOverlayProcesses)
   if ($existing.Count -gt 0) {
     throw "Could not stop existing Hermes overlay process(es): $($existing.ProcessId -join ', ')"
@@ -143,6 +237,8 @@ if (-not (Test-Path $electronCmd)) {
   }
 }
 
+Sync-HermesOverlayApp
+
 $env:HERMES_PET_PORT = [string]$Port
 $env:HERMES_PET_WS_URL = "ws://127.0.0.1:$Port"
 $env:HERMES_PET_WINDOWS_NODE_MODULES = (Join-Path $cacheRoot "node_modules")
@@ -158,6 +254,7 @@ $forwardVars = @(
   "HERMES_PET_DEBUG_DRAG",
   "HERMES_PET_DEBUG_EVENTS",
   "HERMES_PET_OVERLAY_VERIFY_FILE",
+  "HERMES_PET_ELECTRON_USER_DATA",
   "HERMES_PET_ALWAYS_ON_TOP_LEVEL",
   "HERMES_PET_FOCUSABLE",
   "HERMES_PET_SHOW_UPLOAD"
@@ -172,8 +269,7 @@ foreach ($name in $forwardVars) {
 $argsList = @("`"$mainJs`"")
 $proc = Start-Process -FilePath $electronCmd `
   -ArgumentList $argsList `
-  -WorkingDirectory $RepoPath `
-  -WindowStyle Hidden `
+  -WorkingDirectory $appRoot `
   -PassThru
 
 Write-Output "Hermes Windows pet overlay started (pid $($proc.Id))"

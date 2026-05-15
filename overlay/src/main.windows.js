@@ -32,9 +32,9 @@ const VERIFY_FILE = process.env.HERMES_PET_OVERLAY_VERIFY_FILE || '';
 
 let lastSpriteRect = DEFAULT_SPRITE_RECT;
 
-const userDataRoot = process.env.LOCALAPPDATA
+const userDataRoot = process.env.HERMES_PET_ELECTRON_USER_DATA || (process.env.LOCALAPPDATA
   ? path.join(process.env.LOCALAPPDATA, 'HermesAgent', 'pet-overlay-electron', 'user-data')
-  : path.join(os.homedir(), '.hermes-pet-overlay-electron');
+  : path.join(os.homedir(), '.hermes-pet-overlay-electron'));
 app.setPath('userData', userDataRoot);
 app.setName('Hermes Pets Overlay');
 
@@ -153,6 +153,27 @@ function createWindow() {
     },
   });
 
+  let readyShown = false;
+  let rendererLoaded = false;
+  function markReadyToShow(reason) {
+    if (!win || readyShown) return;
+    readyShown = true;
+    reassertOverlayOnTop(reason);
+    win.showInactive();
+    verifyEvent('ready-to-show', { reason, bounds: win.getBounds() });
+  }
+
+  function markRendererLoaded() {
+    if (!win || rendererLoaded) return;
+    rendererLoaded = true;
+    win.webContents.executeJavaScript(
+      "document.body.classList.add('overlay-mode')",
+    ).catch(() => {});
+    verifyEvent('renderer-loaded');
+    setTimeout(() => verifyRendererSnapshot('renderer-loaded'), 250);
+    setTimeout(() => markReadyToShow('did-finish-load-fallback'), 1000);
+  }
+
   win.loadFile(path.join(__dirname, 'renderer.html'), {
       query: {
         species: PET_SPECIES,
@@ -163,19 +184,20 @@ function createWindow() {
       },
   });
   notifyBridgeConnected(false);
+  setTimeout(() => markReadyToShow('startup-fallback'), 1000);
 
-  win.webContents.once('did-finish-load', () => {
-    win.webContents.executeJavaScript(
-      "document.body.classList.add('overlay-mode')",
-    ).catch(() => {});
-    verifyEvent('renderer-loaded');
-    setTimeout(() => verifyRendererSnapshot('renderer-loaded'), 250);
+  win.webContents.once('did-finish-load', markRendererLoaded);
+  win.webContents.once('did-fail-load', (_event, errorCode, errorDescription, validatedURL) => {
+    verifyEvent('renderer-load-error', { errorCode, errorDescription, validatedURL });
   });
+  setTimeout(() => {
+    if (!win || rendererLoaded || win.webContents.isDestroyed()) return;
+    verifyEvent('renderer-load-retry', { reason: 'startup-watchdog' });
+    win.webContents.reloadIgnoringCache();
+  }, 5000);
 
   win.once('ready-to-show', () => {
-    reassertOverlayOnTop('ready-to-show');
-    win.showInactive();
-    verifyEvent('ready-to-show', { bounds: win.getBounds() });
+    markReadyToShow('ready-to-show');
   });
 
   let moveTimeout = null;
