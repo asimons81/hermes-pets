@@ -1,0 +1,128 @@
+name: CI
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+    branches:
+      - main
+
+jobs:
+  validate:
+    name: Python, package, and syntax checks
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v5
+
+      - name: Sync locked Python environment
+        run: uv sync --locked --extra dev
+
+      - name: Verify lockfile is current
+        run: uv lock --check
+
+      - name: Compile Python package
+        run: uv run python -m compileall -q src/hermes_pet
+
+      - name: Run full test suite
+        run: uv run pytest -q
+
+      - name: Run update command tests
+        run: uv run pytest tests/test_update_command.py -q
+
+      - name: Check JavaScript syntax
+        shell: bash
+        run: |
+          set -euo pipefail
+          files=(
+            overlay/src/renderer.js
+            overlay/src/main.js
+            overlay/src/main.windows.js
+            overlay/src/preload.js
+            src/hermes_pet/dashboard/app.js
+            src/hermes_pet/overlay/src/main.windows.js
+          )
+          for file in "${files[@]}"; do
+            if [ -f "$file" ]; then
+              node --check "$file"
+            else
+              echo "skip missing optional JS file: $file"
+            fi
+          done
+
+      - name: Check shell script syntax
+        shell: bash
+        run: |
+          set -euo pipefail
+          files=(
+            shell-helpers/hermes-pet.bash
+            scripts/smoke-hermes-pet.sh
+            scripts/smoke-github-install.sh
+            scripts/verify-packaged-overlay.sh
+            scripts/verify-live-overlay.sh
+          )
+          existing=()
+          for file in "${files[@]}"; do
+            if [ -f "$file" ]; then
+              existing+=("$file")
+            else
+              echo "skip missing optional shell file: $file"
+            fi
+          done
+          if [ "${#existing[@]}" -gt 0 ]; then
+            bash -n "${existing[@]}"
+          fi
+
+      - name: Verify package artifacts
+        shell: bash
+        run: |
+          set -euo pipefail
+          rm -rf dist
+          uv build
+          test -n "$(compgen -G 'dist/*.whl')"
+          test -n "$(compgen -G 'dist/*.tar.gz')"
+          python -m zipfile -t dist/*.whl
+          uv run --with setuptools --with wheel python scripts/verify-package-artifacts.py
+
+  powershell-syntax:
+    name: Windows PowerShell launcher syntax
+    runs-on: windows-latest
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Validate launcher scripts with Windows PowerShell 5.1 parser
+        shell: powershell
+        run: |
+          $ErrorActionPreference = 'Stop'
+          $paths = @(
+            'overlay/scripts/launch-windows-overlay.ps1',
+            'src/hermes_pet/overlay/scripts/launch-windows-overlay.ps1'
+          )
+          foreach ($path in $paths) {
+            if (-not (Test-Path -LiteralPath $path)) {
+              Write-Host "skip missing optional PowerShell file: $path"
+              continue
+            }
+            $tokens = $null
+            $errors = $null
+            [System.Management.Automation.Language.Parser]::ParseFile(
+              $path,
+              [ref]$tokens,
+              [ref]$errors
+            ) | Out-Null
+            if ($errors.Count -gt 0) {
+              throw ($errors | Out-String)
+            }
+          }
