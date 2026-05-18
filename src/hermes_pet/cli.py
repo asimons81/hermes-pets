@@ -40,16 +40,19 @@ from typing import Callable
 
 from hermes_pet.achievements import sync_achievements, unlock_achievement
 from hermes_pet.custom_pets import (
+    activate_custom_pet,
+    codex_candidate_to_dict,
     current_custom_pet,
     custom_pet_event_payload,
     custom_pet_preview_summary,
     custom_pets_dir,
+    discover_codex_pet_candidates,
+    import_codex_pet,
     import_package,
     inspect_package,
     list_custom_pets,
     remove_custom_pet,
     render_custom_pet_preview_html,
-    set_current_custom_pet,
     validate_pet_name,
 )
 from hermes_pet.voice import (
@@ -822,6 +825,17 @@ def _notify_custom_pet_changed(payload: dict[str, object] | None) -> bool:
     )
 
 
+def _notify_pet_state_changed(pet: Pet, custom_pet: dict[str, object] | None = None) -> bool:
+    bridge_mod = importlib.import_module("hermes_pet.bridge")
+    port = _resolve_bridge_port(bridge_mod)
+    host = os.environ.get("HERMES_PET_HOST") or "127.0.0.1"
+    bridge_url = os.environ.get("HERMES_PET_WS_URL")
+    event = pet.to_event_dict()
+    if custom_pet:
+        event["custom_pet"] = custom_pet
+    return bridge_mod.send_event_to_bridge(event, port=port, host=host, bridge_url=bridge_url)
+
+
 def _notify_achievement_unlocks(items: list[dict[str, object]]) -> None:
     if not items:
         return
@@ -947,14 +961,64 @@ def _cmd_custom_pet_import(args: argparse.Namespace) -> int:
     return 0
 
 
+def _cmd_custom_pet_codex(args: argparse.Namespace) -> int:
+    try:
+        candidates = discover_codex_pet_candidates(
+            Path(args.repo_root).expanduser().resolve() if args.repo_root else None,
+            include_repo_output=bool(args.include_repo_output),
+        )
+    except Exception as exc:
+        raise PetCLIError(f"Codex pet discovery failed: {exc}") from exc
+    if not candidates:
+        print("No Codex desktop pets found under CODEX_HOME/pets, ~/.codex/pets, or /mnt/c/Users/*/.codex/pets.")
+        print("Pass --include-repo-output to also scan output/hermes-pet-hatch/ and output/hatch-pet-runs/.")
+        return 0
+    print("Importable Codex-created pets:")
+    for index, candidate in enumerate(candidates, start=1):
+        info = codex_candidate_to_dict(candidate)
+        states = ", ".join(info["states"])
+        print(f"  {index}. {info['slug']} -> {info['name']} [{info['source_kind']}] {info['path']}")
+        print(f"     states: {states}")
+    print("Use: hermes-pet custom-pet import-codex <slug|latest|path> [--use]")
+    return 0
+
+
+def _cmd_custom_pet_import_codex(args: argparse.Namespace) -> int:
+    try:
+        result = import_codex_pet(
+            args.target,
+            name=args.name,
+            base_dir=_state_dir(),
+            repo=Path(args.repo_root).expanduser().resolve() if args.repo_root else None,
+            replace=bool(args.replace),
+            include_repo_output=bool(args.include_repo_output),
+        )
+    except Exception as exc:
+        raise PetCLIError(f"Codex pet import failed: {exc}") from exc
+    imported = result["imported"]
+    candidate = result["candidate"]
+    _unlock_and_notify_achievement("first_custom_pet_imported", source="custom-pet-import-codex")
+    print(f"✅ Imported Codex pet {imported['name']} to {imported['path']}")
+    print(f"Source: {candidate['source_kind']} / {candidate['path']}")
+    if args.use:
+        try:
+            activated = activate_custom_pet(imported["name"], _state_dir())
+        except Exception as exc:
+            raise PetCLIError(f"Imported but could not activate custom pet: {exc}") from exc
+        _notify_pet_state_changed(activated["pet"], activated["custom_pet"])
+        _unlock_and_notify_achievement("first_custom_pet_selected", source="custom-pet-import-codex")
+        print(f"✅ Active custom pet is now {activated['pet'].name}")
+    return 0
+
+
 def _cmd_custom_pet_use(args: argparse.Namespace) -> int:
     try:
-        payload = set_current_custom_pet(args.name, _state_dir())
+        activated = activate_custom_pet(args.name, _state_dir())
     except Exception as exc:
-        raise PetCLIError(f"Could not select custom pet: {exc}") from exc
-    _notify_custom_pet_changed(payload)
+        raise PetCLIError(f"Could not activate custom pet: {exc}") from exc
+    _notify_pet_state_changed(activated["pet"], activated["custom_pet"])
     _unlock_and_notify_achievement("first_custom_pet_selected", source="custom-pet-use")
-    print(f"✅ Using custom pet {payload['name']}")
+    print(f"✅ Active custom pet is now {activated['pet'].name}")
     return 0
 
 
@@ -2241,6 +2305,20 @@ def _build_parser() -> argparse.ArgumentParser:
     custom_pet_import.add_argument("path", help="Package, hatch-pet run, or sprites folder to import.")
     custom_pet_import.add_argument("--name", required=True, help="Installed custom pet name.")
     custom_pet_import.set_defaults(func=_cmd_custom_pet_import)
+
+    custom_pet_codex = custom_pet_sub.add_parser("codex", help="List Codex-created custom pets under repo output/.")
+    custom_pet_codex.add_argument("--repo-root", default="", help="Hermes Pets checkout to scan when --include-repo-output is set.")
+    custom_pet_codex.add_argument("--include-repo-output", action="store_true", help="Also list repo-local output/hermes-pet-hatch and output/hatch-pet-runs candidates.")
+    custom_pet_codex.set_defaults(func=_cmd_custom_pet_codex)
+
+    custom_pet_import_codex = custom_pet_sub.add_parser("import-codex", help="Import a Codex-created pet by slug, path, or latest.")
+    custom_pet_import_codex.add_argument("target", nargs="?", default="latest", help="Codex pet slug, direct path, or 'latest'.")
+    custom_pet_import_codex.add_argument("--name", default=None, help="Installed custom pet name. Defaults to the package name.")
+    custom_pet_import_codex.add_argument("--repo-root", default="", help="Hermes Pets checkout to scan when --include-repo-output is set.")
+    custom_pet_import_codex.add_argument("--include-repo-output", action="store_true", help="Allow importing repo-local output/hermes-pet-hatch and output/hatch-pet-runs candidates.")
+    custom_pet_import_codex.add_argument("--replace", action="store_true", help="Replace an installed custom pet with the same name.")
+    custom_pet_import_codex.add_argument("--use", action="store_true", help="Select the imported custom pet immediately.")
+    custom_pet_import_codex.set_defaults(func=_cmd_custom_pet_import_codex)
 
     custom_pet_use = custom_pet_sub.add_parser("use", help="Select an installed custom pet for the overlay.")
     custom_pet_use.add_argument("name", help="Installed custom pet name.")

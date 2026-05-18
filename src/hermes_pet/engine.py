@@ -150,6 +150,7 @@ RARITY_WEIGHTS = {
 }
 
 HATS = ["none", "crown", "wizard", "propeller", "tinyduck", "bow"]
+CUSTOM_PET_SPECIES = "custom"
 
 STATS = ["DEBUGGING", "CHAOS", "WISDOM", "CREATIVITY", "SPEED", "CURIOSITY"]
 
@@ -273,6 +274,8 @@ class Pet:
 
     def status_line(self) -> str:
         """One-line status."""
+        if self.species == CUSTOM_PET_SPECIES:
+            return f"  {self.name} (Lv.{self.level}) [custom pet]"
         sdef = SPECIES.get(self.species)
         rarity = sdef.rarity if sdef else "???"
         shiny = "✦ SHINY ✦ " if self.variant == "shiny" else ""
@@ -286,11 +289,14 @@ class Pet:
             lines.append(f"  {stat:12} {bar} {val}")
         lines.append(f"  XP: {self.xp}  |  Interactions: {self.total_interactions}")
         lines.append(f"  Milestones: {', '.join(self.milestones) if self.milestones else 'None yet'}")
-        sdef = SPECIES.get(self.species)
-        if sdef:
-            lines.append(f"  Personality: {sdef.personality}")
-            if sdef.favorite_tool:
-                lines.append(f"  Favorite tool: {sdef.favorite_tool}")
+        if self.species == CUSTOM_PET_SPECIES:
+            lines.append("  Personality: Imported custom pet.")
+        else:
+            sdef = SPECIES.get(self.species)
+            if sdef:
+                lines.append(f"  Personality: {sdef.personality}")
+                if sdef.favorite_tool:
+                    lines.append(f"  Favorite tool: {sdef.favorite_tool}")
         return "\n".join(lines)
 
     # ------------------------------------------------------------------

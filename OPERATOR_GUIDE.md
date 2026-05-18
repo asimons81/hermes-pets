@@ -62,7 +62,7 @@ It binds to localhost and prints a private token URL. Keep that URL local and do
 not share it in logs. The dashboard and APIs reject requests without the token.
 
 Use it for daily operator work: inspect pet state, recent jobs/events, bridge
-status, change the active built-in pet, manage custom visual packages,
+status, change the active built-in pet, manage custom pet packages,
 notification preferences, opt-in voice preview, and foundational achievements.
 Custom pet import is intentionally typed-path only in v0.3.0; validate or
 preview packages with the CLI before importing them from the dashboard.
@@ -70,12 +70,12 @@ preview packages with the CLI before importing them from the dashboard.
 The Change Pet view replaces the canonical active pet in `pet.json`. Choosing a
 built-in species or using random hatch creates a fresh companion, matching
 `hermes-pet hatch`: XP, stats, interactions, and milestones reset. Installed
-custom pet packages are kept, but the current custom visual selection is cleared
+custom pet packages are kept, but the current custom pet selection is cleared
 so the overlay returns to the active built-in species.
 
-The Custom Pets view manages visual packages only. `Use custom` selects an
-installed package for the overlay, `Use built-in pet` or `Clear` only removes the
-current visual override, and `Remove` deletes the installed package directory.
+The Custom Pets view manages custom pet packages. `Use custom` activates an
+installed package as the canonical active pet in `pet.json`; clearing keeps the
+installed package on disk, and `Remove` deletes the installed package directory.
 
 The polished v0.3.0 dashboard screenshot and QA evidence live in
 `docs/assets/hermes-pets-dashboard-v030-overview.png` and

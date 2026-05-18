@@ -843,7 +843,8 @@ label {
 }
 
 input[type="text"],
-input[type="number"] {
+input[type="number"],
+select {
   min-width: 0;
   width: 100%;
   min-height: 38px;
@@ -852,6 +853,17 @@ input[type="number"] {
   background: var(--color-bg-input);
   color: var(--color-text-primary);
   padding: 0 10px;
+}
+
+.form-panel hr {
+  width: 100%;
+  border: 0;
+  border-top: 1px solid var(--color-border-subtle);
+  margin: var(--space-1) 0;
+}
+
+.compact-head {
+  margin-top: calc(-1 * var(--space-2));
 }
 
 .segmented {

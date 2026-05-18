@@ -37,12 +37,14 @@ Names must use lowercase letters, numbers, `_`, and `-`, and must start with a l
 hermes-pet custom-pet list
 hermes-pet custom-pet validate output/hatch-pet-runs/fox
 hermes-pet custom-pet import output/hatch-pet-runs/fox --name my-fox
+hermes-pet custom-pet codex
+hermes-pet custom-pet import-codex latest --use
 hermes-pet custom-pet use my-fox
 hermes-pet custom-pet current
 hermes-pet custom-pet remove my-fox
 ```
 
-The bridge sends the selected custom pet package to the overlay on connect. If validation or loading fails, the overlay keeps using the built-in pet species.
+Using a custom pet writes it as the canonical active pet in `pet.json` with species `custom`, and the bridge sends that active pet plus its package manifest to the overlay on connect. If validation or loading fails, Hermes Pets refuses activation rather than silently showing the wrong companion.
 
 ## Preview Workflow
 
@@ -116,7 +118,7 @@ Use the repo-local skill:
 .codex/skills/hermes-pet-hatch/SKILL.md
 ```
 
-The skill uses the existing `hatch-pet` workflow for generation and QA, then packages the finalized frames into the Hermes format.
+The skill uses the existing `hatch-pet` workflow for generation and QA, then packages the finalized frames into the Hermes format. `hermes-pet custom-pet codex` lists importable Codex desktop pets found under `CODEX_HOME/pets`, `~/.codex/pets`, and `/mnt/c/Users/*/.codex/pets`; `hermes-pet custom-pet import-codex <slug|latest|path> --use` imports one directly into the active state directory and activates it immediately. Use `--include-repo-output` only when intentionally scanning repo-local output candidates.
 
 Useful helper scripts:
 
@@ -165,7 +167,7 @@ generated pet run to the repository.
 ## Known Limitations
 
 - Use `hermes-pet custom-pet preview` for an HTML animation check, then import into a temporary `HERMES_PET_HOME` and launch the overlay for a live check when desktop behavior matters.
-- Custom pet selection is local state under `~/.hermes_pet` and does not add the package to the built-in species manifest.
+- Custom pet activation is local state under `~/.hermes_pet`; it writes the active pet as species `custom` and does not add the package to the built-in species manifest.
 - Community custom pet submissions are reviewed as ordinary repository
   contributions. There is no hosted gallery, in-app downloader, or remote upload
   path in Phase 5.

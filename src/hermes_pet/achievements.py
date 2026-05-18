@@ -173,12 +173,12 @@ ACHIEVEMENT_DEFINITIONS: tuple[dict[str, Any], ...] = (
     {
         "id": "custom_pet_cleared",
         "title": "Built-In Restored",
-        "description": "Cleared a custom visual without deleting the package.",
+        "description": "Cleared an active custom pet without deleting the package.",
         "category": "Customization",
         "icon": "X",
         "tier": "Bronze",
         "accent": "secondary",
-        "locked_hint": "Clear the current custom visual selection.",
+        "locked_hint": "Clear the current custom pet selection.",
         "sort_order": 30,
     },
     {

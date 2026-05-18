@@ -34,6 +34,7 @@ classifiers = [
   "Topic :: Utilities",
 ]
 dependencies = [
+  "Pillow>=10.0",
   "websockets>=13.0",
 ]
 

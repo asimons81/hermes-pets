@@ -103,7 +103,7 @@ Scope completed:
 - Static dashboard overview with pet state, selected custom pet, prefs summary,
   recent jobs/events, bridge status, and achievement preview.
 - Change Pet dashboard APIs and UI for replacing the active built-in pet,
-  random hatch, confirmation copy, and custom visual clearing.
+  random hatch, confirmation copy, and custom pet clearing.
 - Custom pet dashboard APIs and UI for typed-path import, select, clear, remove,
   list, invalid state display, and overlay test event.
 - Preferences APIs and UI for profile, quiet mode, tray-on-urgent, idle bubbles,
