@@ -127,6 +127,17 @@
             <label>Package path <input id="importPath" type="text" autocomplete="off" spellcheck="false"></label>
             <label>Installed name <input id="importName" type="text" autocomplete="off" spellcheck="false"></label>
             <button id="importBtn" class="primary" type="button">Import</button>
+            <hr>
+            <div class="panel-head compact-head">
+              <span>Import From Codex</span>
+              <small>repo output</small>
+            </div>
+            <label>Generated pet <select id="codexPetSelect"></select></label>
+            <label>Install as <input id="codexImportName" type="text" autocomplete="off" spellcheck="false" placeholder="use generated name"></label>
+            <label class="toggle-line"><span>Select after import</span><input id="codexUseAfterImport" type="checkbox" checked></label>
+            <label class="toggle-line"><span>Replace same name</span><input id="codexReplaceImport" type="checkbox"></label>
+            <button id="importCodexBtn" class="primary" type="button">Import Codex Pet</button>
+            <p id="codexImportMeta" class="field-note">Codex desktop pets are discovered under CODEX_HOME/pets, ~/.codex/pets, and Windows .codex/pets.</p>
           </section>
         </div>
       </section>

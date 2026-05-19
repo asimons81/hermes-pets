@@ -22,18 +22,22 @@ from hermes_pet.achievements import (
     unlock_achievement,
 )
 from hermes_pet.custom_pets import (
+    activate_custom_pet,
+    clear_active_custom_pet,
     clear_current_custom_pet,
+    codex_candidate_to_dict,
     custom_pet_event_payload,
     custom_pet_preview_summary,
     custom_pets_dir,
+    discover_codex_pet_candidates,
+    import_codex_pet,
     import_package,
     inspect_package,
     list_custom_pets,
     remove_custom_pet,
-    set_current_custom_pet,
     validate_pet_name,
 )
-from hermes_pet.engine import SPECIES, Pet, get_all_species_info, load_pet, save_pet
+from hermes_pet.engine import CUSTOM_PET_SPECIES, SPECIES, Pet, get_all_species_info, load_pet, save_pet
 from hermes_pet.event_log import append_event, load_events, safe_event
 from hermes_pet.events import build_event
 from hermes_pet.jobs import job_scan_summary, recent_jobs
@@ -133,6 +137,7 @@ def build_state_snapshot(*, base_dir: Path | None = None, server: dict[str, obje
         "pet": _pet_snapshot(root),
         "custom_pet": custom_pet_event_payload(root),
         "custom_pets": list_custom_pets(root),
+        "codex_pets": [codex_candidate_to_dict(item) for item in discover_codex_pet_candidates()],
         "prefs": load_prefs(root),
         "voice": voice_status(root),
         "jobs": jobs,
@@ -154,6 +159,13 @@ def _notify_bridge(event: dict[str, Any]) -> bool:
         return bool(bridge.send_event_to_bridge(event, port=port, host=host, bridge_url=bridge_url))
     except Exception:
         return False
+
+
+def _notify_pet_state(pet: Pet, custom_pet: dict[str, Any] | None = None) -> bool:
+    event = pet.to_event_dict()
+    if custom_pet:
+        event["custom_pet"] = custom_pet
+    return _notify_bridge(event)
 
 
 def emit_achievement_unlocks(items: list[dict[str, Any]]) -> None:
@@ -229,13 +241,17 @@ def adopt_dashboard_species(data: dict[str, Any], base_dir: Path | None = None) 
 
 def clear_dashboard_custom_pet(base_dir: Path | None = None) -> dict[str, object]:
     root = base_dir or state_dir()
-    cleared = clear_current_custom_pet(root)
-    _notify_bridge({"type": "custom_pet", "custom_pet": None})
+    was_custom_pet = bool((pet := load_pet("", state_dir=root)) and pet.species == CUSTOM_PET_SPECIES)
+    cleared = clear_active_custom_pet(root)
+    bridge_notified = _notify_bridge({"type": "custom_pet", "custom_pet": None})
+    if was_custom_pet:
+        bridge_notified = _notify_bridge({"type": "state", "species": "", "name": "", "level": 1, "xp": 0, "xp_next": 50, "variant": "normal", "shiny": False, "hat": "none"}) or bridge_notified
     if cleared:
         unlock_dashboard_achievement(root, "custom_pet_cleared", "dashboard-clear-custom")
     return {
         "cleared": cleared,
         "custom_pet": custom_pet_event_payload(root),
+        "bridge_notified": bridge_notified,
         **list_dashboard_custom_pets(root),
         "snapshot": build_state_snapshot(base_dir=root),
     }
@@ -310,18 +326,68 @@ def import_dashboard_custom_pet(data: dict[str, Any], base_dir: Path | None = No
     return {"imported": {"name": slug, "path": str(dest)}, **list_dashboard_custom_pets(root)}
 
 
+def list_dashboard_codex_pets() -> dict[str, object]:
+    return {"pets": [codex_candidate_to_dict(item) for item in discover_codex_pet_candidates()]}
+
+
+def import_dashboard_codex_pet(data: dict[str, Any], base_dir: Path | None = None) -> dict[str, object]:
+    root = base_dir or state_dir()
+    if not isinstance(data, dict):
+        raise DashboardError("Expected a JSON object.")
+    selector = str(data.get("target") or "latest").strip() or "latest"
+    name = str(data.get("name") or "").strip() or None
+    replace = bool(data.get("replace"))
+    use = bool(data.get("use"))
+    try:
+        result = import_codex_pet(selector, name=name, base_dir=root, replace=replace)
+    except Exception as exc:
+        raise DashboardError(str(exc)) from exc
+    unlocked = unlock_achievement("first_custom_pet_imported", base_dir=root, source="dashboard-import-codex")
+    if unlocked:
+        emit_achievement_unlocks([unlocked])
+    payload = None
+    pet = None
+    bridge_notified = False
+    if use:
+        try:
+            activated = activate_custom_pet(str(result["imported"]["name"]), root)
+            payload = activated["custom_pet"]
+            pet = activated["pet"]
+        except Exception as exc:
+            raise DashboardError(f"Imported but could not activate custom pet: {exc}") from exc
+        bridge_notified = _notify_pet_state(pet, payload)
+        selected = unlock_achievement("first_custom_pet_selected", base_dir=root, source="dashboard-import-codex")
+        if selected:
+            emit_achievement_unlocks([selected])
+    return {
+        **result,
+        "current": payload,
+        "pet": pet.to_dict() if pet else None,
+        "bridge_notified": bridge_notified,
+        **list_dashboard_custom_pets(root),
+        "codex_pets": list_dashboard_codex_pets()["pets"],
+        "snapshot": build_state_snapshot(base_dir=root),
+    }
+
+
 def use_dashboard_custom_pet(data: dict[str, Any], base_dir: Path | None = None) -> dict[str, object]:
     root = base_dir or state_dir()
     name = str(data.get("name") or "").strip() if isinstance(data, dict) else ""
     try:
-        payload = set_current_custom_pet(name, root)
+        activated = activate_custom_pet(name, root)
     except Exception as exc:
         raise DashboardError(str(exc)) from exc
-    _notify_bridge({"type": "custom_pet", "custom_pet": payload})
+    bridge_notified = _notify_pet_state(activated["pet"], activated["custom_pet"])
     unlocked = unlock_achievement("first_custom_pet_selected", base_dir=root, source="dashboard-use")
     if unlocked:
         emit_achievement_unlocks([unlocked])
-    return {"current": payload, **list_dashboard_custom_pets(root)}
+    return {
+        "current": activated["custom_pet"],
+        "pet": activated["pet"].to_dict(),
+        "bridge_notified": bridge_notified,
+        **list_dashboard_custom_pets(root),
+        "snapshot": build_state_snapshot(base_dir=root),
+    }
 
 
 def remove_dashboard_custom_pet(name: str, base_dir: Path | None = None) -> dict[str, object]:
@@ -342,6 +408,25 @@ def preview_dashboard_custom_pet(name: str, base_dir: Path | None = None) -> dic
     except Exception as exc:
         raise DashboardError(str(exc), status=404) from exc
     return {"summary": custom_pet_preview_summary(package)}
+
+
+def dashboard_custom_pet_sprite(name: str, state: str, frame: str, base_dir: Path | None = None) -> Path:
+    root = base_dir or state_dir()
+    try:
+        slug = validate_pet_name(name)
+        package = inspect_package(custom_pets_dir(root) / slug, name=slug)
+    except Exception as exc:
+        raise DashboardError(str(exc), status=404) from exc
+
+    state_name = str(state or "").strip()
+    frame_name = Path(str(frame or "")).name
+    cfg = package.states.get(state_name)
+    if not cfg or frame_name not in cfg.get("frames", []):
+        raise DashboardError("Custom pet sprite not found.", status=404)
+    path = package.root / "sprites" / state_name / frame_name
+    if not path.is_file():
+        raise DashboardError("Custom pet sprite not found.", status=404)
+    return path
 
 
 def get_dashboard_voice(base_dir: Path | None = None) -> dict[str, object]:
@@ -465,6 +550,10 @@ class DashboardRequestHandler(BaseHTTPRequestHandler):
                 self._send_json(get_dashboard_prefs(self.dashboard_server.state_dir))
             elif parsed.path == "/api/custom-pets":
                 self._send_json(list_dashboard_custom_pets(self.dashboard_server.state_dir))
+            elif parsed.path == "/api/custom-pets/codex":
+                self._send_json(list_dashboard_codex_pets())
+            elif parsed.path.startswith("/api/custom-pets/") and "/sprite/" in parsed.path:
+                self._serve_custom_pet_sprite(parsed.path)
             elif parsed.path.startswith("/api/custom-pets/") and parsed.path.endswith("/preview"):
                 name = unquote(parsed.path.split("/")[-2])
                 self._send_json(preview_dashboard_custom_pet(name, self.dashboard_server.state_dir))
@@ -498,6 +587,8 @@ class DashboardRequestHandler(BaseHTTPRequestHandler):
                 self._send_json(adopt_dashboard_species(data, self.dashboard_server.state_dir), status=201)
             elif parsed.path == "/api/custom-pets/import":
                 self._send_json(import_dashboard_custom_pet(data, self.dashboard_server.state_dir), status=201)
+            elif parsed.path == "/api/custom-pets/import-codex":
+                self._send_json(import_dashboard_codex_pet(data, self.dashboard_server.state_dir), status=201)
             elif parsed.path == "/api/custom-pets/use":
                 self._send_json(use_dashboard_custom_pet(data, self.dashboard_server.state_dir))
             elif parsed.path == "/api/custom-pets/clear-current":
@@ -556,6 +647,28 @@ class DashboardRequestHandler(BaseHTTPRequestHandler):
             self.send_header("Set-Cookie", f"hermes_pet_dashboard_token={token}; Path=/; SameSite=Strict")
         self.end_headers()
         self.wfile.write(body)
+
+    def _serve_custom_pet_sprite(self, request_path: str) -> None:
+        parts = [unquote(part) for part in request_path.strip("/").split("/")]
+        if len(parts) != 6 or parts[:2] != ["api", "custom-pets"] or parts[3] != "sprite":
+            self._send_error_json("Invalid custom pet sprite path.", status=404)
+            return
+        try:
+            sprite_path = dashboard_custom_pet_sprite(parts[2], parts[4], parts[5], self.dashboard_server.state_dir)
+            body = sprite_path.read_bytes()
+        except DashboardError as exc:
+            self._send_error_json(str(exc), status=exc.status)
+            return
+        except OSError as exc:
+            self._send_error_json(str(exc), status=404)
+            return
+        self.send_response(HTTPStatus.OK)
+        self.send_header("Content-Type", "image/png")
+        self.send_header("Content-Length", str(len(body)))
+        self.send_header("Cache-Control", "no-store")
+        self.end_headers()
+        self.wfile.write(body)
+
 
     def _serve_overlay_asset(self, path: str) -> None:
         rel = path.removeprefix("/overlay/assets/")

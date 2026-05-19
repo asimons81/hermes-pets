@@ -25,7 +25,7 @@ Committed screenshot assets:
 - `docs/assets/hermes-pets-dashboard-v030-overview-small.png` - 560px smaller supported viewport.
 - `docs/assets/hermes-pets-dashboard-v030-custom-pets.png` - Custom Pets empty state and import form.
 - `docs/assets/hermes-pets-dashboard-v030-change-pet.png` - Change Pet built-in species catalog and random hatch controls.
-- `docs/assets/hermes-pets-dashboard-v030-custom-pets-selected.png` - Custom Pets selected custom visual with non-destructive clear action.
+- `docs/assets/hermes-pets-dashboard-v030-custom-pets-selected.png` - Custom Pets active custom pet with non-destructive clear action.
 - `docs/assets/hermes-pets-dashboard-v030-preferences.png` - Preferences controls.
 - `docs/assets/hermes-pets-dashboard-v030-voice.png` - Voice preview controls.
 - `docs/assets/hermes-pets-dashboard-v030-achievements.png` - Achievement ledger.
@@ -35,9 +35,9 @@ Committed screenshot assets:
 - Populated overview with active pet, job metrics, succeeded job, failed retryable job, event log, bridge offline state, and achievements.
 - Custom Pets empty state.
 - Change Pet populated species catalog with current built-in species marked, adopt/restart actions, and random hatch.
-- Custom Pets selected custom visual state with `Use built-in pet`, `Clear`, and destructive `Remove` controls visually separated.
-- Pet replacement confirmation copy is implemented in the dashboard JavaScript and states that XP, stats, and milestones reset, installed packages are kept, and the current custom visual selection is cleared.
-- API/test coverage includes no active pet adoption, existing pet replacement/reset, invalid species, bad JSON, random hatch, clear current custom visual, and token protection.
+- Custom Pets active custom pet state with `Use built-in pet`, `Clear`, and destructive `Remove` controls visually separated.
+- Pet replacement confirmation copy is implemented in the dashboard JavaScript and states that XP, stats, and milestones reset, installed packages are kept, and the current custom pet selection is cleared.
+- API/test coverage includes no active pet adoption, existing pet replacement/reset, invalid species, bad JSON, random hatch, clear current custom pet, and token protection.
 - Preferences populated from default local prefs.
 - Voice preview disabled/default state.
 - Achievements mixed locked/unlocked state, plus quiet overlay unlock notice copy: `Achievement unlocked: Clean Run`.

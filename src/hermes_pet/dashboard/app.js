@@ -135,7 +135,7 @@ function setView(name) {
   const viewMeta = {
     overview: ['Overview', 'Your active pet, recent signals, and local console health.'],
     change: ['Change Pet', 'Choose a built-in companion or hatch a fresh random pet.'],
-    custom: ['Custom Pets', 'Installed visual packages and typed-path package import.'],
+    custom: ['Custom Pets', 'Installed custom pet packages and typed-path package import.'],
     prefs: ['Preferences', 'Notification posture, quiet mode, and local bubble behavior.'],
     voice: ['Voice Preview', 'Opt-in adapter plumbing for one explicit local test.'],
     achievements: ['Achievements', 'A compact local ledger of foundational unlocks.'],
@@ -143,6 +143,16 @@ function setView(name) {
   const [title, subtitle] = viewMeta[name] || viewMeta.overview;
   $('viewTitle').textContent = title;
   $('viewSubtitle').textContent = subtitle;
+}
+
+function customPetSpriteSrc(custom, preferredState = 'idle') {
+  if (!custom?.name || !custom?.manifest?.states) return '';
+  const states = custom.manifest.states;
+  const stateName = states[preferredState] ? preferredState : (states.idle ? 'idle' : Object.keys(states)[0]);
+  const frames = states[stateName]?.frames || [];
+  const frame = frames[0];
+  if (!stateName || !frame) return '';
+  return `/api/custom-pets/${encodeURIComponent(custom.name)}/sprite/${encodeURIComponent(stateName)}/${encodeURIComponent(frame)}`;
 }
 
 function renderSnapshot(snapshot) {
@@ -167,7 +177,7 @@ function renderPet(snapshot) {
   const pet = snapshot.pet;
   const custom = snapshot.custom_pet;
   const card = $('petCard');
-  if (!pet) {
+  if (!pet && !custom) {
     card.className = 'pet-card pet-empty-card';
     card.innerHTML = `
       <div class="pet-empty">
@@ -177,21 +187,30 @@ function renderPet(snapshot) {
     `;
     return;
   }
-  const xp = Number(pet.xp || 0);
-  const xpNext = Number(pet.xp_next || 0);
+  const xp = Number(pet?.xp || 0);
+  const xpNext = Number(pet?.xp_next || 0);
   const progress = xpNext > 0 ? Math.max(0, Math.min(100, Math.round((xp / xpNext) * 100))) : 0;
-  const species = pet.species || 'cat';
-  const customLabel = custom?.name ? `Custom visual: ${custom.name}` : 'Built-in visual';
-  const visualState = custom?.name ? 'Custom visual active' : 'Built-in visual active';
-  const variantLabel = [pet.species, pet.variant, pet.hat && pet.hat !== 'none' ? `${pet.hat} hat` : ''].filter(Boolean).join(' / ');
+  const species = pet?.species || 'custom';
+  const spriteSrc = custom?.name ? customPetSpriteSrc(custom, 'idle') : `/overlay/assets/sprites/${encodeURIComponent(species || 'cat')}.png`;
+  const spriteAlt = custom?.name ? `${custom.name} custom pet sprite` : `${species} sprite`;
+  const displayName = custom?.name || pet?.name || 'Custom pet';
+  const levelLabel = pet?.level ? `Lv.${pet.level}` : 'Custom';
+  const visualState = custom?.name ? 'Active custom pet' : 'Built-in visual active';
+  const customLabel = custom?.name ? `Active custom pet package: ${custom.name}` : 'Built-in pet';
+  const baseVariant = pet ? [pet.species, pet.variant, pet.hat && pet.hat !== 'none' ? `${pet.hat} hat` : ''].filter(Boolean).join(' / ') : 'custom pet only';
+  const variantLabel = custom?.name && pet?.species === 'custom'
+    ? `Custom pet package: ${custom.name}`
+    : custom?.name && pet
+      ? `Custom pet package: ${custom.name} / previous pet state: ${pet.name}`
+      : baseVariant;
   card.className = 'pet-card pet-hero-card';
   card.innerHTML = `
-    <div class="sprite-stage" aria-label="${escapeHtml(pet.name || 'Active pet')} sprite">
-      <img alt="${escapeHtml(species)} sprite" src="/overlay/assets/sprites/${encodeURIComponent(species)}.png">
+    <div class="sprite-stage" aria-label="${escapeHtml(displayName)} sprite">
+      <img alt="${escapeHtml(spriteAlt)}" src="${escapeHtml(spriteSrc)}">
     </div>
     <div class="pet-hero-copy">
-      <p class="pet-kicker">Active companion / ${escapeHtml(visualState)}</p>
-      <h2 class="pet-name">${escapeHtml(pet.name)} <span>Lv.${escapeHtml(pet.level)}</span></h2>
+      <p class="pet-kicker">${escapeHtml(visualState)}</p>
+      <h2 class="pet-name">${escapeHtml(displayName)} <span>${escapeHtml(levelLabel)}</span></h2>
       <div class="pet-meta">
         <span>${escapeHtml(variantLabel || 'local pet')}</span>
         <span>${escapeHtml(customLabel)}</span>
@@ -206,9 +225,9 @@ function renderPet(snapshot) {
         </div>
       </div>
       <div class="pet-stat-grid">
-        <div><strong>${escapeHtml(pet.total_interactions || 0)}</strong><span>Interactions</span></div>
-        <div><strong>${escapeHtml((pet.milestones || []).length)}</strong><span>Milestones</span></div>
-        <div><strong>${escapeHtml(pet.variant || 'normal')}</strong><span>Variant</span></div>
+        <div><strong>${escapeHtml(pet?.total_interactions || 0)}</strong><span>Interactions</span></div>
+        <div><strong>${escapeHtml((pet?.milestones || []).length)}</strong><span>Milestones</span></div>
+        <div><strong>${escapeHtml(custom?.name ? 'custom' : (pet?.variant || 'normal'))}</strong><span>Visual</span></div>
       </div>
     </div>
   `;
@@ -408,15 +427,17 @@ function achievementCard(item) {
 
 function renderCustomPets(snapshot) {
   const pets = snapshot.custom_pets || [];
+  const codexPets = snapshot.codex_pets || [];
   const hasCurrentCustom = pets.some((pet) => pet.current);
   $('customDir').textContent = snapshot.state_dir ? `${snapshot.state_dir}/custom-pets` : '';
   $('customDir').title = $('customDir').textContent;
+  renderCodexImportOptions(codexPets);
   $('customPetsList').innerHTML = `
     ${hasCurrentCustom ? `
       <div class="custom-current-note">
         <div>
-          <strong>Custom visual selected</strong>
-          <span>The active pet is using custom artwork. Clear it to return the active pet to its built-in visual without deleting the custom package.</span>
+          <strong>Custom pet active</strong>
+          <span>This imported pet is the active companion. Clear it to remove the custom active pet without deleting the installed package.</span>
         </div>
         <button class="secondary" type="button" data-clear-current-custom="true">Use built-in pet</button>
       </div>
@@ -424,7 +445,7 @@ function renderCustomPets(snapshot) {
     ${pets.length ? pets.map((pet) => `
     <div class="pet-row ${pet.current ? 'current-custom' : ''}">
       <div>
-        <strong>${pet.current ? 'Current custom visual / ' : ''}${escapeHtml(pet.name)}</strong>
+        <strong>${pet.current ? 'Active custom pet / ' : ''}${escapeHtml(pet.name)}</strong>
         <small>${pet.valid ? petSummary(pet) : `invalid / ${escapeHtml(pet.error || 'unknown error')}`}</small>
       </div>
       <div class="row-actions">
@@ -441,6 +462,27 @@ function petSummary(pet) {
   const frames = (pet.state_summary || []).map((item) => `${item.name}:${item.frame_count}`).join(', ');
   const missing = (pet.missing_optional_states || []).slice(0, 3).join(', ');
   return escapeHtml(`${frames || (pet.states || []).join(', ') || 'valid'}${missing ? ' / missing ' + missing : ''}`);
+}
+
+function renderCodexImportOptions(codexPets) {
+  const select = $('codexPetSelect');
+  const meta = $('codexImportMeta');
+  if (!select || !meta) return;
+  if (!codexPets.length) {
+    select.innerHTML = '<option value="latest">No Codex pets found</option>';
+    select.disabled = true;
+    $('importCodexBtn').disabled = true;
+    meta.textContent = 'No importable Codex desktop pets found under known Codex pet stores.';
+    return;
+  }
+  select.disabled = false;
+  $('importCodexBtn').disabled = false;
+  select.innerHTML = codexPets.map((pet, index) => {
+    const value = index === 0 ? 'latest' : pet.slug;
+    const states = (pet.states || []).join(', ');
+    return `<option value="${escapeHtml(value)}">${escapeHtml(index === 0 ? 'latest / ' : '')}${escapeHtml(pet.slug)} (${escapeHtml(pet.source_kind || 'codex')}, ${escapeHtml(states || 'valid')})</option>`;
+  }).join('');
+  meta.textContent = `${codexPets.length} Codex-created pet${codexPets.length === 1 ? '' : 's'} found. Latest defaults to ${codexPets[0].slug}.`;
 }
 
 function hydratePrefs(prefs) {
@@ -549,7 +591,7 @@ function confirmFreshPet(actionLabel) {
   if (!pet) return true;
   return window.confirm(
     `${actionLabel} will replace ${pet.name || 'the active pet'} with a fresh pet. ` +
-    'XP, stats, and milestones will reset. Installed custom pet packages are kept, but the current custom visual selection will be cleared. Continue?'
+    'XP, stats, and milestones will reset. Installed custom pet packages are kept, but the current custom pet selection will be cleared. Continue?'
   );
 }
 
@@ -623,6 +665,26 @@ $('importBtn').addEventListener('click', async () => {
     showAlert(error.message, 'error');
   }
 });
+$('importCodexBtn').addEventListener('click', async () => {
+  try {
+    const result = await api('/api/custom-pets/import-codex', {
+      method: 'POST',
+      body: JSON.stringify({
+        target: $('codexPetSelect').value || 'latest',
+        name: $('codexImportName').value,
+        use: $('codexUseAfterImport').checked,
+        replace: $('codexReplaceImport').checked,
+      }),
+    });
+    $('codexImportName').value = '';
+    const snapshot = snapshotFromResult(result);
+    if (snapshot?.custom_pets !== undefined) renderSnapshot(snapshot);
+    showAlert(result.current ? 'Codex pet imported and selected.' : 'Codex pet imported.', 'success');
+    refresh();
+  } catch (error) {
+    showAlert(error.message, 'error');
+  }
+});
 $('customPetsList').addEventListener('click', async (event) => {
   const use = event.target?.dataset?.use;
   const remove = event.target?.dataset?.remove;
@@ -631,7 +693,7 @@ $('customPetsList').addEventListener('click', async (event) => {
     if (use) await api('/api/custom-pets/use', { method: 'POST', body: JSON.stringify({ name: use }) });
     if (clearCurrent) await api('/api/custom-pets/clear-current', { method: 'POST', body: '{}' });
     if (remove) await api(`/api/custom-pets/${encodeURIComponent(remove)}`, { method: 'DELETE' });
-    showAlert(use ? 'Custom visual selected.' : clearCurrent ? 'Built-in pet visual restored.' : 'Custom pet package removed.', clearCurrent ? 'success' : 'info');
+    showAlert(use ? 'Custom pet activated.' : clearCurrent ? 'Custom active pet cleared.' : 'Custom pet package removed.', clearCurrent ? 'success' : 'info');
     refresh();
   } catch (error) {
     showAlert(error.message, 'error');

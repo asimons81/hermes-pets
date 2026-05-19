@@ -10,6 +10,7 @@ import urllib.request
 from pathlib import Path
 
 import pytest
+from PIL import Image
 
 from hermes_pet import cli
 from hermes_pet.achievements import (
@@ -28,17 +29,21 @@ from hermes_pet.dashboard import (
     adopt_dashboard_species,
     build_state_snapshot,
     clear_dashboard_custom_pet,
+    dashboard_custom_pet_sprite,
     emit_dashboard_test_event,
     get_dashboard_voice,
     hatch_dashboard_random_pet,
+    import_dashboard_codex_pet,
     import_dashboard_custom_pet,
+    list_dashboard_codex_pets,
     list_dashboard_species_catalog,
     require_dashboard_assets,
     test_dashboard_voice as run_dashboard_voice_test,
     update_dashboard_voice,
+    use_dashboard_custom_pet,
     update_dashboard_prefs,
 )
-from hermes_pet.engine import Pet, load_pet, save_pet
+from hermes_pet.engine import CUSTOM_PET_SPECIES, Pet, load_pet, save_pet
 from hermes_pet.jobs import save_jobs
 from hermes_pet.prefs import load_prefs, save_prefs
 from hermes_pet.voice import (
@@ -142,6 +147,35 @@ def test_dashboard_state_handles_empty_and_populated_temp_home(tmp_path) -> None
     assert {"first_custom_pet_imported", "first_custom_pet_selected", "first_wrapped_job_completed", "level_5"} <= unlocked
 
 
+
+def test_dashboard_serves_selected_custom_pet_sprite_and_ui_uses_it(tmp_path) -> None:
+    source = _make_custom_pet(tmp_path)
+    import_package(source, name="operator", base_dir=tmp_path)
+    set_current_custom_pet("operator", base_dir=tmp_path)
+
+    sprite = dashboard_custom_pet_sprite("operator", "idle", "idle_00.png", tmp_path)
+    assert sprite.read_bytes() == PNG_BYTES
+
+    root = require_dashboard_assets()
+    app_js = root.joinpath("app.js").read_text(encoding="utf-8")
+    assert "function customPetSpriteSrc" in app_js
+    assert "/api/custom-pets/${encodeURIComponent(custom.name)}/sprite/" in app_js
+    assert "Active custom pet" in app_js
+
+    server = DashboardHTTPServer(("127.0.0.1", 0), "secret-token", tmp_path, quiet=True)
+    thread = threading.Thread(target=server.serve_forever, daemon=True)
+    thread.start()
+    url = f"http://127.0.0.1:{server.server_address[1]}/api/custom-pets/operator/sprite/idle/idle_00.png"
+    try:
+        req = urllib.request.Request(url, headers={"X-Hermes-Pet-Token": "secret-token"})
+        with urllib.request.urlopen(req, timeout=2) as response:
+            assert response.status == 200
+            assert response.headers.get("Content-Type") == "image/png"
+            assert response.read() == PNG_BYTES
+    finally:
+        server.shutdown()
+        server.server_close()
+
 def test_dashboard_custom_pet_import_rejects_duplicates_and_unlocks(tmp_path) -> None:
     source = _make_custom_pet(tmp_path)
     result = import_dashboard_custom_pet({"path": str(source), "name": "operator"}, tmp_path)
@@ -150,6 +184,59 @@ def test_dashboard_custom_pet_import_rejects_duplicates_and_unlocks(tmp_path) ->
     with pytest.raises(Exception, match="already exists"):
         import_dashboard_custom_pet({"path": str(source), "name": "operator"}, tmp_path)
 
+
+def test_dashboard_import_codex_pet_uses_codex_pet_store_and_can_select(tmp_path, monkeypatch) -> None:
+    codex_home = tmp_path / "codex-home"
+    source = codex_home / "pets" / "spark"
+    source.mkdir(parents=True)
+    Image.new("RGBA", (1536, 1872), (255, 0, 255, 0)).save(source / "spritesheet.webp")
+    (source / "pet.json").write_text(json.dumps({"id": "spark", "displayName": "Spark", "spritesheetPath": "spritesheet.webp"}), encoding="utf-8")
+    monkeypatch.setenv("CODEX_HOME", str(codex_home))
+    monkeypatch.setenv("HERMES_PET_DISABLE_WINDOWS_CODEX_SCAN", "1")
+
+    listed = list_dashboard_codex_pets()["pets"]
+    assert listed and listed[0]["slug"] == "spark"
+    result = import_dashboard_codex_pet({"target": "spark", "use": True}, tmp_path)
+
+    assert result["imported"]["name"] == "spark"
+    assert result["current"]["name"] == "spark"
+    assert result["pet"]["name"] == "spark"
+    assert result["pet"]["species"] == CUSTOM_PET_SPECIES
+    assert result["snapshot"]["pet"]["name"] == "spark"
+    saved = load_pet("", state_dir=tmp_path)
+    assert saved is not None and saved.name == "spark" and saved.species == CUSTOM_PET_SPECIES
+    assert (tmp_path / "custom-pets" / "spark" / "custom-pet.json").is_file()
+    assert (tmp_path / "custom-pets" / "spark" / "sprites" / "idle" / "idle_00.png").is_file()
+    unlocked = load_achievement_state(tmp_path)["unlocked"]
+    assert "first_custom_pet_imported" in unlocked
+    assert "first_custom_pet_selected" in unlocked
+
+
+
+def test_dashboard_use_custom_pet_switches_actual_active_pet(tmp_path) -> None:
+    source = _make_custom_pet(tmp_path)
+    import_package(source, name="operator", base_dir=tmp_path)
+
+    result = use_dashboard_custom_pet({"name": "operator"}, tmp_path)
+
+    assert result["current"]["name"] == "operator"
+    assert result["pet"]["name"] == "operator"
+    assert result["pet"]["species"] == CUSTOM_PET_SPECIES
+    assert result["snapshot"]["pet"]["name"] == "operator"
+    saved = load_pet("", state_dir=tmp_path)
+    assert saved is not None and saved.name == "operator" and saved.species == CUSTOM_PET_SPECIES
+
+
+def test_dashboard_clear_custom_pet_clears_custom_only_active_pet(tmp_path) -> None:
+    source = _make_custom_pet(tmp_path)
+    import_package(source, name="operator", base_dir=tmp_path)
+    use_dashboard_custom_pet({"name": "operator"}, tmp_path)
+
+    result = clear_dashboard_custom_pet(tmp_path)
+
+    assert result["cleared"] is True
+    assert result["snapshot"]["pet"] is None
+    assert load_pet("", state_dir=tmp_path) is None
 
 def test_dashboard_species_catalog_and_no_pet_adoption(tmp_path) -> None:
     catalog = list_dashboard_species_catalog(tmp_path)

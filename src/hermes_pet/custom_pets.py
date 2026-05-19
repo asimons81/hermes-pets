@@ -10,7 +10,7 @@ import subprocess
 from base64 import b64encode
 from dataclasses import dataclass
 from html import escape
-from pathlib import Path
+from pathlib import Path, PureWindowsPath
 from typing import Any
 
 from hermes_pet.prefs import state_dir
@@ -21,6 +21,7 @@ CUSTOM_PET_METADATA = "custom-pet.json"
 SAFE_NAME_RE = re.compile(r"^[a-z0-9][a-z0-9_-]{0,63}$")
 SAFE_FRAME_RE = re.compile(r"^[A-Za-z0-9][A-Za-z0-9_.-]*\.png$")
 PNG_SIGNATURE = b"\x89PNG\r\n\x1a\n"
+MAX_CODEX_SPRITESHEET_PIXELS = 32_000_000
 
 STATE_MAP = {
     "idle": ("idle", 4, True, None),
@@ -68,6 +69,419 @@ class CustomPetPackage:
     name: str
     states: dict[str, dict[str, Any]]
     source_format: str
+
+
+@dataclass(frozen=True)
+class CodexPetCandidate:
+    """Importable pet package produced by Codex pet tooling."""
+
+    slug: str
+    path: Path
+    name: str
+    source_format: str
+    source_kind: str
+    modified_at: float
+    states: tuple[str, ...]
+
+
+CODEX_PET_PACKAGE_ROOT = Path("output/hermes-pet-hatch")
+CODEX_HATCH_RUN_ROOT = Path("output/hatch-pet-runs")
+CODEX_APP_PETS_ROOT = Path(".codex/pets")
+CODEX_LATEST_ALIASES = {"", "latest", "newest", "last"}
+CODEX_APP_ATLAS_COLUMNS = 8
+CODEX_APP_ATLAS_ROWS = 9
+CODEX_APP_STATE_ROWS = (
+    ("idle", 0, 6),
+    ("running-right", 1, 8),
+    ("running-left", 2, 8),
+    ("waving", 3, 4),
+    ("jumping", 4, 5),
+    ("failed", 5, 8),
+    ("waiting", 6, 6),
+    ("running", 7, 6),
+    ("review", 8, 6),
+)
+
+
+def repo_root(default: Path | None = None) -> Path:
+    """Return the source checkout root used for optional repo-local output discovery."""
+
+    if default is not None:
+        return Path(default).expanduser().resolve()
+    return Path(__file__).resolve().parents[2]
+
+
+def _candidate_modified_at(path: Path) -> float:
+    probe_paths = [
+        path,
+        path / "pet.json",
+        path / "spritesheet.webp",
+        path / CUSTOM_PET_METADATA,
+        path / "qa" / "run-summary.json",
+        path / "qa" / "review.json",
+        path / "final" / "validation.json",
+        path / "frames" / "frames-manifest.json",
+    ]
+    mtimes = []
+    for item in probe_paths:
+        try:
+            mtimes.append(item.stat().st_mtime)
+        except OSError:
+            continue
+    return max(mtimes) if mtimes else 0.0
+
+
+def _load_codex_app_pet_metadata(path: Path) -> dict[str, Any] | None:
+    metadata_path = path / "pet.json"
+    spritesheet_path = path / "spritesheet.webp"
+    if not metadata_path.is_file() or not spritesheet_path.is_file():
+        return None
+    try:
+        data = json.loads(metadata_path.read_text(encoding="utf-8"))
+    except Exception:
+        return None
+    if not isinstance(data, dict):
+        return None
+    return data
+
+
+def _resolve_codex_pet_child_path(root: Path, value: object, *, default: str) -> Path:
+    """Resolve a Codex metadata path, requiring it to stay inside the pet root."""
+
+    raw = default if value is None else str(value).strip()
+    if not raw or "\x00" in raw:
+        raise ValueError("Codex pet metadata path is empty")
+    if raw.startswith("\\\\") or re.match(r"^[A-Za-z]:[\\/]", raw):
+        raise ValueError("Codex pet metadata path must be relative")
+
+    windows_candidate = PureWindowsPath(raw)
+    if windows_candidate.is_absolute() or windows_candidate.drive:
+        raise ValueError("Codex pet metadata path must be relative")
+
+    candidate = Path(raw)
+    if candidate.is_absolute():
+        raise ValueError("Codex pet metadata path must be relative")
+
+    parts = windows_candidate.parts
+    if not parts or any(part in {"", ".", ".."} for part in parts):
+        raise ValueError("Codex pet metadata path must not contain traversal segments")
+
+    root_resolved = root.resolve()
+    resolved = root_resolved.joinpath(*parts).resolve()
+    try:
+        resolved.relative_to(root_resolved)
+    except ValueError as exc:
+        raise ValueError("Codex pet metadata path escapes the pet directory") from exc
+    return resolved
+
+
+def _codex_app_pet_candidate(path: Path) -> CodexPetCandidate | None:
+    metadata = _load_codex_app_pet_metadata(path)
+    if metadata is None:
+        return None
+    raw_name = metadata.get("id") or metadata.get("name") or metadata.get("displayName") or path.name
+    try:
+        slug = validate_pet_name(str(raw_name))
+    except ValueError:
+        return None
+    display_name = str(metadata.get("displayName") or slug)
+    return CodexPetCandidate(
+        slug=slug,
+        path=path.resolve(),
+        name=slug,
+        source_format="codex-pet",
+        source_kind="codex-pet",
+        modified_at=_candidate_modified_at(path),
+        states=tuple(STATE_MAP[state][0] for state, _, _ in CODEX_APP_STATE_ROWS),
+    )
+
+
+def _codex_candidate(path: Path, *, slug: str, source_kind: str) -> CodexPetCandidate | None:
+    if source_kind == "codex-pet":
+        return _codex_app_pet_candidate(path)
+    try:
+        package = inspect_package(path)
+    except Exception:
+        return None
+    return CodexPetCandidate(
+        slug=validate_pet_name(slug),
+        path=path.resolve(),
+        name=package.name,
+        source_format=package.source_format,
+        source_kind=source_kind,
+        modified_at=_candidate_modified_at(path),
+        states=tuple(_canonical_state_order(set(package.states))),
+    )
+
+
+def codex_candidate_to_dict(candidate: CodexPetCandidate) -> dict[str, Any]:
+    return {
+        "slug": candidate.slug,
+        "name": candidate.name,
+        "path": str(candidate.path),
+        "source_format": candidate.source_format,
+        "source_kind": candidate.source_kind,
+        "modified_at": candidate.modified_at,
+        "states": list(candidate.states),
+    }
+
+
+def _windows_user_codex_pet_dirs() -> list[Path]:
+    users_root = Path("/mnt/c/Users")
+    if not users_root.is_dir():
+        return []
+    dirs: list[Path] = []
+    try:
+        users = sorted(users_root.iterdir())
+    except OSError:
+        return []
+    for user_dir in users:
+        if not user_dir.is_dir() or user_dir.name.lower() in {"public", "default", "default user", "all users"}:
+            continue
+        pets_dir = user_dir / CODEX_APP_PETS_ROOT
+        if pets_dir.is_dir():
+            dirs.append(pets_dir)
+    return dirs
+
+
+def codex_app_pets_dirs() -> list[Path]:
+    """Return likely Codex desktop pet stores, preferring explicit/current-user locations."""
+
+    candidates: list[Path] = []
+    env_home = os.environ.get("CODEX_HOME")
+    if env_home:
+        candidates.append(Path(env_home).expanduser() / "pets")
+    candidates.append(Path.home() / CODEX_APP_PETS_ROOT)
+    if os.environ.get("HERMES_PET_DISABLE_WINDOWS_CODEX_SCAN") not in {"1", "true", "yes"}:
+        candidates.extend(_windows_user_codex_pet_dirs())
+    unique: list[Path] = []
+    seen: set[Path] = set()
+    for path in candidates:
+        try:
+            resolved = path.resolve()
+        except OSError:
+            continue
+        if resolved in seen or not path.is_dir():
+            continue
+        unique.append(path)
+        seen.add(resolved)
+    return unique
+
+
+def _discover_codex_app_pet_candidates() -> list[CodexPetCandidate]:
+    candidates: list[CodexPetCandidate] = []
+    seen: set[Path] = set()
+    for pets_dir in codex_app_pets_dirs():
+        try:
+            pets_root = pets_dir.resolve()
+            items = sorted(pets_dir.iterdir())
+        except OSError:
+            continue
+        for item in items:
+            if not item.is_dir() or item.name.startswith(".") or ".backup" in item.name:
+                continue
+            try:
+                resolved = item.resolve()
+                resolved.relative_to(pets_root)
+            except (OSError, ValueError):
+                continue
+            if resolved in seen:
+                continue
+            candidate = _codex_app_pet_candidate(item)
+            if candidate:
+                candidates.append(candidate)
+                seen.add(resolved)
+    return candidates
+
+
+def _discover_repo_output_candidates(repo: Path | None = None) -> list[CodexPetCandidate]:
+    root = repo_root(repo)
+    candidates: list[CodexPetCandidate] = []
+    seen: set[Path] = set()
+
+    package_root = root / CODEX_PET_PACKAGE_ROOT
+    if package_root.is_dir():
+        try:
+            package_root_resolved = package_root.resolve()
+        except OSError:
+            package_root_resolved = None
+        for item in sorted(package_root.iterdir()):
+            if not item.is_dir() or package_root_resolved is None:
+                continue
+            for path, source_kind in ((item / "package", "codex-package"), (item, "codex-package")):
+                try:
+                    resolved = path.resolve()
+                    resolved.relative_to(package_root_resolved)
+                except (OSError, ValueError):
+                    continue
+                if resolved in seen or not path.is_dir():
+                    continue
+                candidate = _codex_candidate(path, slug=item.name, source_kind=source_kind)
+                if candidate:
+                    candidates.append(candidate)
+                    seen.add(resolved)
+                    break
+
+    hatch_root = root / CODEX_HATCH_RUN_ROOT
+    if hatch_root.is_dir():
+        try:
+            hatch_root_resolved = hatch_root.resolve()
+        except OSError:
+            hatch_root_resolved = None
+        for item in sorted(hatch_root.iterdir()):
+            if not item.is_dir() or hatch_root_resolved is None:
+                continue
+            try:
+                resolved = item.resolve()
+                resolved.relative_to(hatch_root_resolved)
+            except (OSError, ValueError):
+                continue
+            if resolved in seen:
+                continue
+            candidate = _codex_candidate(item, slug=item.name, source_kind="hatch-pet-run")
+            if candidate:
+                candidates.append(candidate)
+                seen.add(resolved)
+    return candidates
+
+
+def _sort_codex_candidates(candidates: list[CodexPetCandidate]) -> list[CodexPetCandidate]:
+    priority = {"codex-pet": 0, "codex-package": 1, "hatch-pet-run": 2, "direct-path": 3}
+    return sorted(candidates, key=lambda item: (priority.get(item.source_kind, 9), -item.modified_at, item.slug))
+
+
+def discover_codex_pet_candidates(repo: Path | None = None, *, include_repo_output: bool = False) -> list[CodexPetCandidate]:
+    """Find valid Codex desktop pets, optionally including repo-local hatch outputs."""
+
+    candidates = _discover_codex_app_pet_candidates()
+    if include_repo_output:
+        existing = {candidate.path for candidate in candidates}
+        for candidate in _discover_repo_output_candidates(repo):
+            if candidate.path not in existing:
+                candidates.append(candidate)
+    return _sort_codex_candidates(candidates)
+
+
+def resolve_codex_pet_candidate(
+    selector: str | Path | None = None,
+    *,
+    repo: Path | None = None,
+    include_repo_output: bool = False,
+) -> CodexPetCandidate:
+    """Resolve a Codex pet selector: latest, slug/name, or direct path."""
+
+    raw_selector = str(selector or "latest").strip()
+    root = repo_root(repo)
+    if raw_selector not in CODEX_LATEST_ALIASES:
+        candidate_path = Path(raw_selector).expanduser()
+        if not candidate_path.is_absolute():
+            candidate_path = (root / candidate_path).resolve()
+        if candidate_path.exists():
+            candidate = _codex_app_pet_candidate(candidate_path) or _codex_candidate(
+                candidate_path,
+                slug=candidate_path.name,
+                source_kind="direct-path",
+            )
+            if candidate is None:
+                raise ValueError(f"Codex pet path is not a valid Codex pet, package, or hatch-pet run: {candidate_path}")
+            return candidate
+
+    candidates = discover_codex_pet_candidates(root, include_repo_output=include_repo_output)
+    if not candidates:
+        searched = [str(path) for path in codex_app_pets_dirs()]
+        if include_repo_output:
+            searched.extend([str(root / CODEX_PET_PACKAGE_ROOT), str(root / CODEX_HATCH_RUN_ROOT)])
+        raise ValueError(f"No importable Codex pets found. Searched: {', '.join(searched) or 'no Codex pet dirs found'}")
+
+    normalized = raw_selector.lower()
+    if normalized in CODEX_LATEST_ALIASES:
+        return candidates[0]
+
+    matches = [item for item in candidates if normalized in {item.slug.lower(), item.name.lower(), item.path.name.lower()}]
+    if not matches:
+        available = ", ".join(item.slug for item in candidates[:10])
+        raise ValueError(f"No Codex pet matches '{raw_selector}'. Available: {available or 'none'}")
+    return _sort_codex_candidates(matches)[0]
+
+
+def _copy_codex_app_pet(candidate: CodexPetCandidate, dest: Path, installed_name: str) -> None:
+    metadata = _load_codex_app_pet_metadata(candidate.path)
+    if metadata is None:
+        raise ValueError(f"invalid Codex pet store package: {candidate.path}")
+    try:
+        from PIL import Image
+    except ImportError as exc:
+        raise ValueError("Pillow is required to import Codex spritesheet pets") from exc
+
+    spritesheet = _resolve_codex_pet_child_path(candidate.path, metadata.get("spritesheetPath"), default="spritesheet.webp")
+    if not spritesheet.is_file():
+        raise ValueError(f"missing Codex pet spritesheet: {spritesheet}")
+    with Image.open(spritesheet) as loaded_image:
+        width, height = loaded_image.size
+        if width <= 0 or height <= 0 or width * height > MAX_CODEX_SPRITESHEET_PIXELS:
+            raise ValueError(f"unsafe Codex spritesheet size: {width}x{height}")
+        if width % CODEX_APP_ATLAS_COLUMNS or height % CODEX_APP_ATLAS_ROWS:
+            raise ValueError(f"unexpected Codex spritesheet size: {width}x{height}")
+        image = loaded_image.convert("RGBA")
+    cell_width = image.width // CODEX_APP_ATLAS_COLUMNS
+    cell_height = image.height // CODEX_APP_ATLAS_ROWS
+
+    states: dict[str, dict[str, Any]] = {}
+    sprites_root = dest / "sprites"
+    for hatch_state, row, frame_count in CODEX_APP_STATE_ROWS:
+        hermes_state, fps, loop, fallback = STATE_MAP[hatch_state]
+        state_dir = sprites_root / hermes_state
+        state_dir.mkdir(parents=True, exist_ok=True)
+        frame_names: list[str] = []
+        for index in range(frame_count):
+            frame_name = f"{hermes_state}_{index:02d}.png"
+            crop = image.crop((index * cell_width, row * cell_height, (index + 1) * cell_width, (row + 1) * cell_height))
+            crop.save(state_dir / frame_name)
+            frame_names.append(frame_name)
+        cfg: dict[str, Any] = {"fps": fps, "loop": loop, "frames": frame_names}
+        if fallback:
+            cfg["fallback"] = fallback
+        states[hermes_state] = cfg
+
+    package = CustomPetPackage(root=dest, name=installed_name, states=states, source_format="codex-pet")
+    write_package_metadata(dest, package)
+    shutil.copy2(candidate.path / "pet.json", dest / "codex-pet.json")
+    shutil.copy2(spritesheet, dest / "spritesheet.webp")
+
+
+def import_codex_pet(
+    selector: str | Path | None = None,
+    *,
+    name: str | None = None,
+    base_dir: Path | None = None,
+    repo: Path | None = None,
+    replace: bool = False,
+    include_repo_output: bool = False,
+) -> dict[str, Any]:
+    """Import a Codex-generated custom pet into the active Hermes Pets state dir."""
+
+    candidate = resolve_codex_pet_candidate(selector, repo=repo, include_repo_output=include_repo_output)
+    installed_name = validate_pet_name(name or candidate.name or candidate.slug)
+    dest = custom_pets_dir(base_dir) / installed_name
+    if dest.exists():
+        if not replace:
+            raise ValueError(f"custom pet already exists: {installed_name}")
+        remove_custom_pet(installed_name, base_dir)
+    dest.parent.mkdir(parents=True, exist_ok=True)
+    if candidate.source_kind == "codex-pet":
+        dest.mkdir(parents=True, exist_ok=False)
+        try:
+            _copy_codex_app_pet(candidate, dest, installed_name)
+        except Exception:
+            shutil.rmtree(dest, ignore_errors=True)
+            raise
+        imported_path = dest
+    else:
+        imported_path = import_package(candidate.path, name=installed_name, base_dir=base_dir)
+    return {
+        "candidate": codex_candidate_to_dict(candidate),
+        "imported": {"name": installed_name, "path": str(imported_path)},
+    }
 
 
 def _canonical_state_order(states: set[str]) -> list[str]:
@@ -436,10 +850,15 @@ def import_package(path: str | Path, *, name: str, base_dir: Path | None = None)
     dest.mkdir(parents=True, exist_ok=False)
     try:
         _copy_package_frames(package, dest)
-        for optional in ("contact-sheet.png", "README.md"):
-            source = package.root / optional
-            if source.is_file():
-                shutil.copy2(source, dest / optional)
+        optional_sources = {
+            "contact-sheet.png": (package.root / "contact-sheet.png", package.root / "qa" / "contact-sheet.png"),
+            "README.md": (package.root / "README.md",),
+        }
+        for target_name, sources in optional_sources.items():
+            for source in sources:
+                if source.is_file():
+                    shutil.copy2(source, dest / target_name)
+                    break
         write_package_metadata(dest, package)
     except Exception:
         shutil.rmtree(dest, ignore_errors=True)
@@ -483,6 +902,48 @@ def set_current_custom_pet(name: str, base_dir: Path | None = None) -> dict[str,
     path.parent.mkdir(parents=True, exist_ok=True)
     path.write_text(json.dumps(selection, indent=2, sort_keys=True) + "\n", encoding="utf-8")
     return custom_pet_event_payload(base_dir)
+
+
+def activate_custom_pet(name: str, base_dir: Path | None = None) -> dict[str, Any]:
+    """Make an installed custom pet the actual active pet, not just an overlay visual."""
+
+    root = base_dir or state_dir()
+    slug = validate_pet_name(name)
+    package_dir = custom_pets_dir(root) / slug
+    package = inspect_package(package_dir, name=slug)
+
+    from hermes_pet.engine import CUSTOM_PET_SPECIES, STATS, Pet, load_pet, save_pet
+
+    existing = load_pet("", state_dir=root)
+    if existing and existing.species == CUSTOM_PET_SPECIES and existing.name == package.name:
+        pet = existing
+    else:
+        pet = Pet(
+            name=package.name,
+            species=CUSTOM_PET_SPECIES,
+            variant="custom",
+            hat="none",
+            stats={stat: 1 for stat in STATS},
+        )
+    save_pet(pet, state_dir=root)
+    payload = set_current_custom_pet(package.name, root)
+    return {"pet": pet, "custom_pet": payload}
+
+
+def clear_active_custom_pet(base_dir: Path | None = None) -> bool:
+    """Clear custom selection and remove custom-only active pet state if needed."""
+
+    root = base_dir or state_dir()
+    cleared = clear_current_custom_pet(root)
+    try:
+        from hermes_pet.engine import CUSTOM_PET_SPECIES, delete_pet, load_pet
+
+        pet = load_pet("", state_dir=root)
+        if pet and pet.species == CUSTOM_PET_SPECIES:
+            delete_pet(root)
+    except Exception:
+        pass
+    return cleared
 
 
 def clear_current_custom_pet(base_dir: Path | None = None) -> bool:

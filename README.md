@@ -207,21 +207,21 @@ The Change Pet view can switch to a specific built-in species or hatch a fresh
 random pet. Both choices replace the canonical active pet in `pet.json`, matching
 `hermes-pet hatch` reset semantics: XP, stats, interactions, milestones, variant,
 hat, and timestamps start fresh. Changing the active built-in pet also clears the
-current custom visual selection so the visible companion returns to the selected
+current custom pet selection so the visible companion returns to the selected
 built-in species, while installed custom pet packages stay on disk.
 
 <img src="docs/assets/hermes-pets-dashboard-v030-change-pet.png" alt="Hermes Pets v0.3.0 Change Pet dashboard view with built-in species and random hatch controls" width="720">
 
-The Custom Pets view mirrors the CLI workflow for local visual packages:
+The Custom Pets view mirrors the CLI workflow for local custom pet packages:
 
 - `Import` installs a package from a typed local path with an installed name.
-- `Use` selects an installed custom pet as the current visual package.
-- `Use built-in pet` clears the current custom visual selection without deleting
-  installed packages.
+- `Use` makes an installed custom pet the canonical active pet in `pet.json`.
+- `Use built-in pet` clears the current custom pet selection without deleting
+  installed packages; if the active pet was custom-only, it clears that active pet state.
 - `Remove` deletes an installed custom pet package and clears it if it was
   selected.
 
-<img src="docs/assets/hermes-pets-dashboard-v030-custom-pets-selected.png" alt="Hermes Pets v0.3.0 Custom Pets dashboard view with a selected custom visual package" width="720">
+<img src="docs/assets/hermes-pets-dashboard-v030-custom-pets-selected.png" alt="Hermes Pets v0.3.0 Custom Pets dashboard view with a selected custom pet" width="720">
 
 Achievements are intentionally foundational in v0.3.0. Hermes Pets stores the
 local ledger in `achievements.json`, unlocks achievements idempotently, and shows
@@ -255,21 +255,24 @@ hermes-pet custom-pet validate <path>
 hermes-pet custom-pet preview <path> --output /tmp/pet-preview.html
 hermes-pet custom-pet preview --installed <name> --output /tmp/pet-preview.html
 hermes-pet custom-pet import <path> --name <name>
+hermes-pet custom-pet codex
+hermes-pet custom-pet import-codex latest --use
 hermes-pet custom-pet use <name>
 hermes-pet custom-pet current
 hermes-pet custom-pet remove <name>
 ```
 
-The same import/select/remove workflow is available in the local dashboard, with
-one extra non-destructive control: `Use built-in pet` clears the current custom
-visual selection without deleting installed packages. Use the CLI for validation
-and preview HTML when preparing a package, then use the dashboard when you want
-a compact operator surface for selecting, clearing, or removing installed visual
-packages.
+The same import/activate/remove workflow is available in the local dashboard, with
+one extra non-destructive control: clearing a custom pet keeps the installed
+package on disk. Use the CLI for validation and preview HTML when preparing a
+package, then use the dashboard when you want a compact operator surface for
+activating, clearing, or removing installed custom pet packages.
 
 `<path>` can be a finalized `hatch-pet` run or a package with `custom-pet.json` and `sprites/<state>/*.png`. `idle` is required; optional states fall back to idle when missing. See `CUSTOM_PETS.md` for the package format and the repo-local Codex skill at `.codex/skills/hermes-pet-hatch/SKILL.md`.
 
-For a safe preview workflow, validate or package the pet, inspect the generated contact sheet when present, then run `hermes-pet custom-pet preview <path> --output /tmp/pet-preview.html`. To prove the bridge and renderer can load the package, import/select it inside a temporary `HERMES_PET_HOME` and run `scripts/verify-live-overlay.sh` or launch with `hermes-pet launch --replace`.
+Codex-created pets have a shortcut path: `custom-pet codex` discovers valid Codex desktop pets in `CODEX_HOME/pets`, `~/.codex/pets`, and `/mnt/c/Users/*/.codex/pets`, then `custom-pet import-codex <slug|latest|path> --use` imports and activates one without copy-pasting long paths. The dashboard Custom view exposes the same Import From Codex control. Pass `--include-repo-output` only when you intentionally want to scan old repo-local `output/hermes-pet-hatch/` or `output/hatch-pet-runs/` candidates.
+
+For a safe preview workflow, validate or package the pet, inspect the generated contact sheet when present, then run `hermes-pet custom-pet preview <path> --output /tmp/pet-preview.html`. To prove the bridge and renderer can load the package, import and activate it inside a temporary `HERMES_PET_HOME` and run `scripts/verify-live-overlay.sh` or launch with `hermes-pet launch --replace`.
 
 ## Launch
 
