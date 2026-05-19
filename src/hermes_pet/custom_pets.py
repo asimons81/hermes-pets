@@ -221,9 +221,43 @@ def codex_candidate_to_dict(candidate: CodexPetCandidate) -> dict[str, Any]:
         "path": str(candidate.path),
         "source_format": candidate.source_format,
         "source_kind": candidate.source_kind,
+        "source_label": _codex_candidate_source_label(candidate),
         "modified_at": candidate.modified_at,
         "states": list(candidate.states),
     }
+
+
+def _codex_candidate_source_label(candidate: CodexPetCandidate) -> str:
+    """Human-readable source label for disambiguating duplicated Codex stores."""
+
+    path = candidate.path
+    if candidate.source_kind != "codex-pet":
+        return candidate.source_kind
+
+    try:
+        resolved = path.resolve()
+    except OSError:
+        resolved = path
+
+    env_home = os.environ.get("CODEX_HOME")
+    if env_home:
+        try:
+            resolved.relative_to((Path(env_home).expanduser() / "pets").resolve())
+            return "CODEX_HOME"
+        except (OSError, ValueError):
+            pass
+
+    try:
+        resolved.relative_to((Path.home() / CODEX_APP_PETS_ROOT).resolve())
+        return "WSL ~/.codex/pets"
+    except (OSError, ValueError):
+        pass
+
+    parts = resolved.parts
+    if len(parts) >= 6 and parts[1:4] == ("mnt", "c", "Users"):
+        return f"Windows {parts[4]} .codex/pets"
+
+    return "Codex pet store"
 
 
 def _windows_user_codex_pet_dirs() -> list[Path]:

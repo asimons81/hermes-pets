@@ -478,9 +478,10 @@ function renderCodexImportOptions(codexPets) {
   select.disabled = false;
   $('importCodexBtn').disabled = false;
   select.innerHTML = codexPets.map((pet, index) => {
-    const value = index === 0 ? 'latest' : pet.slug;
+    const value = index === 0 ? 'latest' : (pet.path || pet.slug);
     const states = (pet.states || []).join(', ');
-    return `<option value="${escapeHtml(value)}">${escapeHtml(index === 0 ? 'latest / ' : '')}${escapeHtml(pet.slug)} (${escapeHtml(pet.source_kind || 'codex')}, ${escapeHtml(states || 'valid')})</option>`;
+    const source = pet.source_label || pet.source_kind || 'codex';
+    return `<option value="${escapeHtml(value)}">${escapeHtml(index === 0 ? 'latest / ' : '')}${escapeHtml(pet.slug)} (${escapeHtml(source)}, ${escapeHtml(states || 'valid')})</option>`;
   }).join('');
   meta.textContent = `${codexPets.length} Codex-created pet${codexPets.length === 1 ? '' : 's'} found. Latest defaults to ${codexPets[0].slug}.`;
 }

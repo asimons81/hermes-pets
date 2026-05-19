@@ -977,7 +977,8 @@ def _cmd_custom_pet_codex(args: argparse.Namespace) -> int:
     for index, candidate in enumerate(candidates, start=1):
         info = codex_candidate_to_dict(candidate)
         states = ", ".join(info["states"])
-        print(f"  {index}. {info['slug']} -> {info['name']} [{info['source_kind']}] {info['path']}")
+        source = info.get("source_label") or info["source_kind"]
+        print(f"  {index}. {info['slug']} -> {info['name']} [{source}] {info['path']}")
         print(f"     states: {states}")
     print("Use: hermes-pet custom-pet import-codex <slug|latest|path> [--use]")
     return 0
@@ -2306,7 +2307,15 @@ def _build_parser() -> argparse.ArgumentParser:
     custom_pet_import.add_argument("--name", required=True, help="Installed custom pet name.")
     custom_pet_import.set_defaults(func=_cmd_custom_pet_import)
 
-    custom_pet_codex = custom_pet_sub.add_parser("codex", help="List Codex-created custom pets under repo output/.")
+    custom_pet_codex = custom_pet_sub.add_parser(
+        "codex",
+        help="List Codex desktop pets from CODEX_HOME, ~/.codex, and Windows stores.",
+        description=(
+            "List Codex desktop pets from CODEX_HOME/pets, ~/.codex/pets, and "
+            "/mnt/c/Users/*/.codex/pets. Repo output is only scanned when "
+            "--include-repo-output is passed."
+        ),
+    )
     custom_pet_codex.add_argument("--repo-root", default="", help="Hermes Pets checkout to scan when --include-repo-output is set.")
     custom_pet_codex.add_argument("--include-repo-output", action="store_true", help="Also list repo-local output/hermes-pet-hatch and output/hatch-pet-runs candidates.")
     custom_pet_codex.set_defaults(func=_cmd_custom_pet_codex)

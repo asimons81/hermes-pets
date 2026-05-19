@@ -196,7 +196,8 @@ def test_dashboard_import_codex_pet_uses_codex_pet_store_and_can_select(tmp_path
 
     listed = list_dashboard_codex_pets()["pets"]
     assert listed and listed[0]["slug"] == "spark"
-    result = import_dashboard_codex_pet({"target": "spark", "use": True}, tmp_path)
+    assert listed[0]["source_label"] == "CODEX_HOME"
+    result = import_dashboard_codex_pet({"target": str(source), "use": True}, tmp_path)
 
     assert result["imported"]["name"] == "spark"
     assert result["current"]["name"] == "spark"

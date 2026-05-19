@@ -9,6 +9,7 @@ from hermes_pet import cli
 from hermes_pet.custom_pets import (
     activate_custom_pet,
     clear_active_custom_pet,
+    codex_candidate_to_dict,
     discover_codex_pet_candidates,
     import_codex_pet,
     import_package,
@@ -18,6 +19,11 @@ from hermes_pet.custom_pets import (
     resolve_codex_pet_candidate,
 )
 from hermes_pet.engine import CUSTOM_PET_SPECIES, load_pet
+
+
+@pytest.fixture(autouse=True)
+def _isolate_real_codex_home(monkeypatch, tmp_path) -> None:
+    monkeypatch.setenv("HOME", str(tmp_path / "home"))
 
 
 def test_inspect_minimal_custom_pet_fixture() -> None:
@@ -117,6 +123,7 @@ def test_discovers_codex_app_pets_first_and_resolves_latest(tmp_path, monkeypatc
     assert [candidate.slug for candidate in candidates] == ["ruby"]
     assert candidates[0].path == ruby.resolve()
     assert candidates[0].source_kind == "codex-pet"
+    assert codex_candidate_to_dict(candidates[0])["source_label"] == "CODEX_HOME"
     assert resolve_codex_pet_candidate("latest", repo=tmp_path).slug == "ruby"
 
 
