@@ -23,6 +23,7 @@ This file records local implementation milestones and release-candidate notes al
 - Repaired the actual editable uv-tool runtime by reinstalling `hermes-pet` with Pillow present, preventing false confidence from ambient system Python.
 - Hardened duplicate Codex candidate handling so WSL and Windows stores are distinguishable instead of showing repeated ambiguous slugs.
 - Improved dashboard duplicate-name errors with actionable recovery guidance.
+- Updated the live overlay verifier to accept the current `state` event shape for custom-pet selection, matching the bridge behavior exercised by T4/T6.
 
 ### Changed
 

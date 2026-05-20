@@ -146,7 +146,7 @@ HERMES_PET_POSITION_FILE="$position_file" \
 wait_for_log "overlay ready" 'r.get("type") == "ready-to-show"'
 wait_for_log "bridge connected" 'r.get("type") == "bridge-connected" and r.get("connected") is True'
 run_cli custom-pet use live-overlay-fallback >/dev/null
-wait_for_log "custom pet event forwarded" 'r.get("type") == "pet-event" and r.get("eventType") == "custom_pet" and r.get("hasCustomPet") is True'
+wait_for_log "custom pet state event forwarded" 'r.get("type") == "pet-event" and r.get("hasCustomPet") is True and r.get("eventType") in ("state", "custom_pet")'
 wait_for_log "custom pet fallback loaded" 'r.get("type") == "renderer-snapshot" and r.get("snapshot", {}).get("customPet") == "live-overlay-fallback" and r.get("snapshot", {}).get("animation") == "idle"'
 
 run_cli emit job_finished "live overlay verifier success event" >/dev/null
