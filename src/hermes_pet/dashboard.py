@@ -341,7 +341,10 @@ def import_dashboard_codex_pet(data: dict[str, Any], base_dir: Path | None = Non
     try:
         result = import_codex_pet(selector, name=name, base_dir=root, replace=replace)
     except Exception as exc:
-        raise DashboardError(str(exc)) from exc
+        message = str(exc)
+        if message.startswith("custom pet already exists:"):
+            message = f"{message}. Enable Replace same name to overwrite it, or choose a different install name."
+        raise DashboardError(message) from exc
     unlocked = unlock_achievement("first_custom_pet_imported", base_dir=root, source="dashboard-import-codex")
     if unlocked:
         emit_achievement_unlocks([unlocked])

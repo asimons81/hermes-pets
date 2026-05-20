@@ -680,7 +680,10 @@ $('importCodexBtn').addEventListener('click', async () => {
     $('codexImportName').value = '';
     const snapshot = snapshotFromResult(result);
     if (snapshot?.custom_pets !== undefined) renderSnapshot(snapshot);
-    showAlert(result.current ? 'Codex pet imported and selected.' : 'Codex pet imported.', 'success');
+    const selectedMessage = result.bridge_notified === false
+      ? 'Codex pet imported and selected. Bridge is offline.'
+      : 'Codex pet imported and selected.';
+    showAlert(result.current ? selectedMessage : 'Codex pet imported.', 'success');
     refresh();
   } catch (error) {
     showAlert(error.message, 'error');

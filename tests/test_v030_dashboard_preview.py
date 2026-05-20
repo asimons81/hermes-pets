@@ -161,6 +161,7 @@ def test_dashboard_serves_selected_custom_pet_sprite_and_ui_uses_it(tmp_path) ->
     assert "function customPetSpriteSrc" in app_js
     assert "/api/custom-pets/${encodeURIComponent(custom.name)}/sprite/" in app_js
     assert "Active custom pet" in app_js
+    assert "Codex pet imported and selected. Bridge is offline." in app_js
 
     server = DashboardHTTPServer(("127.0.0.1", 0), "secret-token", tmp_path, quiet=True)
     thread = threading.Thread(target=server.serve_forever, daemon=True)
@@ -201,6 +202,7 @@ def test_dashboard_import_codex_pet_uses_codex_pet_store_and_can_select(tmp_path
 
     assert result["imported"]["name"] == "spark"
     assert result["current"]["name"] == "spark"
+    assert result["bridge_notified"] is False
     assert result["pet"]["name"] == "spark"
     assert result["pet"]["species"] == CUSTOM_PET_SPECIES
     assert result["snapshot"]["pet"]["name"] == "spark"
@@ -211,6 +213,8 @@ def test_dashboard_import_codex_pet_uses_codex_pet_store_and_can_select(tmp_path
     unlocked = load_achievement_state(tmp_path)["unlocked"]
     assert "first_custom_pet_imported" in unlocked
     assert "first_custom_pet_selected" in unlocked
+    with pytest.raises(DashboardError, match="Enable Replace same name"):
+        import_dashboard_codex_pet({"target": str(source), "name": "spark"}, tmp_path)
 
 
 
