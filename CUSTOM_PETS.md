@@ -118,7 +118,7 @@ Use the repo-local skill:
 .codex/skills/hermes-pet-hatch/SKILL.md
 ```
 
-The skill uses the existing `hatch-pet` workflow for generation and QA, then packages the finalized frames into the Hermes format. `hermes-pet custom-pet codex` lists importable Codex desktop pets found under `CODEX_HOME/pets`, `~/.codex/pets`, and `/mnt/c/Users/*/.codex/pets`; `hermes-pet custom-pet import-codex <slug|latest|path> --use` imports one directly into the active state directory and activates it immediately. Use `--include-repo-output` only when intentionally scanning repo-local output candidates.
+The skill uses the existing `hatch-pet` workflow for generation and QA, then packages the finalized frames into the Hermes format. `hermes-pet custom-pet codex` lists importable Codex desktop pets found under `CODEX_HOME/pets`, `~/.codex/pets`, and `/mnt/c/Users/*/.codex/pets`; duplicate WSL/Windows stores are labeled by source so the operator can choose deliberately. `hermes-pet custom-pet import-codex <slug|latest|path> --use` imports one directly into the active state directory and activates it immediately. Prefer a direct path when duplicate slugs exist. Use `--include-repo-output` only when intentionally scanning repo-local output candidates.
 
 Useful helper scripts:
 

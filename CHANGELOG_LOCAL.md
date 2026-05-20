@@ -10,6 +10,25 @@ This file records local implementation milestones and release-candidate notes al
 
 ## Implemented Milestones
 
+## v0.5.0 - 2026-05-20
+
+### Added
+
+- Added the Codex custom-pet trust release path: discover Codex desktop pets, import by slug/latest/direct path, activate, preview, and verify in the live WSL/Windows overlay.
+- Added dashboard Import From Codex support with source labels, direct-path selection for duplicate candidates, custom install names, replace behavior, and bridge-offline truth in success feedback.
+- Added v0.5.0 release evidence under `docs/releases/v0.5.0.md`, including the T1-T4 Codex readiness packet and live overlay evidence path.
+
+### Fixed
+
+- Repaired the actual editable uv-tool runtime by reinstalling `hermes-pet` with Pillow present, preventing false confidence from ambient system Python.
+- Hardened duplicate Codex candidate handling so WSL and Windows stores are distinguishable instead of showing repeated ambiguous slugs.
+- Improved dashboard duplicate-name errors with actionable recovery guidance.
+
+### Changed
+
+- Bumped package metadata and lockfile from `0.4.1` to `0.5.0` for the release candidate.
+- Kept PyPI, installer publishing, hosted gallery, drag/drop import, native platform expansion, full voice mode, rich achievements, and dashboard redesign out of scope.
+
 ## v0.4.1 - 2026-05-14
 
 ### Fixed

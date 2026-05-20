@@ -1,6 +1,6 @@
 # Hermes Pets Current State
 
-Snapshot date: 2026-05-14
+Snapshot date: 2026-05-20
 
 ## What Works
 
@@ -47,7 +47,7 @@ Snapshot date: 2026-05-14
 - Bash helpers and a smoke script are available for daily operation.
 - A temp-state smoke mode and a fresh GitHub install smoke script are available for release confidence.
 - WSL2/Windows with Windows interop is the supported full-overlay platform; native Linux, macOS, and native Windows are documented as investigation targets only.
-- v0.4.1 corrective release candidate fixes v0.4.0 release hygiene, lockfile/version coherence, update diagnostics, and live overlay cleanup reliability. It still needs Tony approval, push/merge, and final tag/release steps.
+- v0.5.0 release candidate is prepared as the Codex custom-pet trust release: real Codex desktop pets can be discovered, imported, activated, previewed, and verified in the live WSL/Windows overlay with temp-state evidence. It still needs Tony approval before push, tag, GitHub Release, PyPI, or installer work.
 
 ## Key Commands
 
@@ -59,6 +59,9 @@ hermes-pet status
 hermes-pet custom-pet list
 hermes-pet custom-pet validate <path>
 hermes-pet custom-pet import <path> --name <name>
+hermes-pet custom-pet codex
+hermes-pet custom-pet import-codex latest --use
+hermes-pet custom-pet preview --installed <name> --output /tmp/custom-pet-preview.html
 hermes-pet custom-pet use <name>
 hermes-pet custom-pet current
 hermes-pet launch
@@ -158,8 +161,8 @@ hpbrief
 
 ## Next Recommended Improvements
 
-- Use the `v0.4.1` corrective release as the next trust baseline once the final validation stack passes; keep any PyPI upload or installer work as an explicit future task.
-- Expand automated CLI tests around parser behavior, wrapped command execution, and brief formatting.
+- Await Tony's explicit release approval, then push the prepared commits, create/tag `v0.5.0`, and draft the GitHub Release. Do not publish to PyPI or build an installer unless separately approved.
+- Keep PR #71 / macOS work out of the v0.5.0 release train; native platform expansion is still a later investigation target.
 - Add deeper live overlay checks for drag ergonomics, always-on-top behavior, and multi-monitor/DPI setups.
 - Add richer custom pet preview controls such as playback speed and side-by-side state comparison.
 - Add an automated backup helper around `${HERMES_PET_HOME:-~/.hermes_pet}` once the manual copy/restore workflow has enough field use.

@@ -107,6 +107,28 @@ scripts/verify-live-overlay.sh
   the next-version recommendation.
 - Do not bump `pyproject.toml` during Phase 5 by default.
 
+## v0.5.0 Codex Custom-Pet Trust Closeout
+
+- Confirm `pyproject.toml`, `uv.lock`, source-checkout CLI version, and release notes agree on `0.5.0`.
+- Confirm the actual uv-tool runtime can import Pillow, not just ambient system Python:
+
+```bash
+/home/tony/.local/share/uv/tools/hermes-pet/bin/python -c "import PIL; print(PIL.__version__)"
+```
+
+- Run the Codex trust path in temporary state, using a real Codex desktop pet when available:
+
+```bash
+HERMES_PET_HOME="$(mktemp -d)" hermes-pet custom-pet codex
+HERMES_PET_HOME="$(mktemp -d)" hermes-pet custom-pet import-codex <slug|latest|path> --name release-codex --use
+```
+
+- Confirm duplicate WSL/Windows Codex candidates show source labels and dashboard explicit choices use direct paths.
+- Confirm dashboard Import From Codex handles empty state, populated state, latest, custom install name, duplicate without replace, duplicate with replace, use-after-import, bridge offline feedback, and selected custom pet sprite rendering.
+- Confirm a live WSL/Windows overlay run proves a Codex-imported pet renders, event/bubble/failure/attention states don't blank it, bridge reconnect works, and removal/missing-custom-pet fallback survives.
+- Use the evidence path in `docs/releases/v0.5.0.md` for the final approval packet.
+- Do not push, tag, publish a GitHub Release, upload to PyPI, build an installer, or claim native platform expansion without explicit Tony approval.
+
 ## v0.3.0 Dashboard Release Closeout
 
 - Confirm `hermes-pet dashboard` binds to localhost only, prints a private
