@@ -6,6 +6,15 @@ Hermes Pets is a local desktop companion for Hermes-style daily work: a small an
 
 It exists to make long local coding sessions feel more legible and alive. The pet gives visible feedback when work starts, finishes, fails, needs attention, or goes quiet, without requiring a hosted service or remote account.
 
+## What's New in 0.6.0
+
+v0.6.0 turns a local work session into a shareable recap card with receipts, without adding hosted sharing or accounts.
+
+- `hermes-pet recap export` is the narrow CLI entry point for the recap flow.
+- The export bundle lands as `recap-card.png`, `caption.txt`, and `metadata.json`.
+- The renderer is deterministic, so the same session state produces the same recap card.
+- The final polish pass cleaned up the source window label and made the card read like a product artifact instead of a dashboard screenshot.
+
 The repo combines a Python CLI, a WebSocket bridge, local state under `~/.hermes_pet`, and a floating Electron overlay for WSL/Windows. The current tool is focused on practical operator use:
 
 - Launch one floating pet overlay from WSL/Windows.
@@ -270,7 +279,7 @@ activating, clearing, or removing installed custom pet packages.
 
 `<path>` can be a finalized `hatch-pet` run or a package with `custom-pet.json` and `sprites/<state>/*.png`. `idle` is required; optional states fall back to idle when missing. See `CUSTOM_PETS.md` for the package format and the repo-local Codex skill at `.codex/skills/hermes-pet-hatch/SKILL.md`.
 
-Codex-created pets have a shortcut path: `custom-pet codex` discovers valid Codex desktop pets in `CODEX_HOME/pets`, `~/.codex/pets`, and `/mnt/c/Users/*/.codex/pets`, then `custom-pet import-codex <slug|latest|path> --use` imports and activates one without copy-pasting long paths. v0.5.0 hardens this path as the Codex custom-pet trust release: duplicate WSL/Windows candidates show source labels, explicit dashboard choices submit direct paths, and the dashboard Import From Codex flow reports bridge-offline state honestly after selection. Pass `--include-repo-output` only when you intentionally want to scan old repo-local `output/hermes-pet-hatch/` or `output/hatch-pet-runs/` candidates.
+Codex-created pets have a shortcut path: `custom-pet codex` discovers valid Codex desktop pets in `CODEX_HOME/pets`, `~/.codex/pets`, and `/mnt/c/Users/*/.codex/pets`, then `custom-pet import-codex <slug|latest|path> --use` imports and activates one without copy-pasting long paths. The Codex custom-pet trust path hardens duplicate WSL/Windows candidates with source labels, lets explicit dashboard choices submit direct paths, and reports bridge-offline state honestly after selection. Pass `--include-repo-output` only when you intentionally want to scan old repo-local `output/hermes-pet-hatch/` or `output/hatch-pet-runs/` candidates.
 
 For a safe preview workflow, validate or package the pet, inspect the generated contact sheet when present, then run `hermes-pet custom-pet preview <path> --output /tmp/pet-preview.html`. To prove the bridge and renderer can load the package, import and activate it inside a temporary `HERMES_PET_HOME` and run `scripts/verify-live-overlay.sh` or launch with `hermes-pet launch --replace`.
 

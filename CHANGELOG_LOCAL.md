@@ -14,9 +14,9 @@ This file records local implementation milestones and release-candidate notes al
 
 ### Added
 
-- Added the local recap export flow: render a deterministic static recap card, package it into a local bundle, and expose it through a narrow CLI entry point.
-- Added `recap-card.png`, `caption.txt`, and `metadata.json` as the export bundle shape for shareable local handoff.
-- Added deterministic tests for the recap card renderer and export flow.
+- Added the local recap export flow: render a deterministic static recap card from local session state, package it into a local bundle, and expose it through the narrow `hermes-pet recap export` CLI entry point.
+- Added `recap-card.png`, `caption.txt`, and `metadata.json` as the export bundle shape for shareable local handoff and manual review.
+- Added deterministic tests for the recap card renderer, export bundle shape, and export flow.
 
 ### Fixed
 
@@ -24,8 +24,8 @@ This file records local implementation milestones and release-candidate notes al
 
 ### Changed
 
-- Bumped package metadata and lockfile version surfaces to `0.6.0` for the recap export release candidate.
-- Kept hosted sharing, accounts, public posting, dashboard redesign, motion-first default, platform expansion, PyPI publish, and installer work out of scope.
+- Bumped package metadata and lockfile version surfaces to `0.6.0` for the recap export release.
+- Kept the release local-first, with hosted sharing, accounts, public posting, dashboard redesign, motion-first default, platform expansion, PyPI publish, and installer work out of scope.
 
 
 ## v0.5.0 - 2026-05-20

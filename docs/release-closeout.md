@@ -90,23 +90,23 @@ Use `0.1.1` only if the release task intentionally narrows scope to documentatio
 and patch-level packaging cleanup without presenting Phase 5 as the next public
 readiness release.
 
-## v0.5.0 Codex Custom-Pet Trust Release Readiness
+## v0.6.0 Recap Export Release Readiness
 
-The v0.5.0 release candidate is prepared as the Codex custom-pet trust release. It should be tagged or released only after Tony explicitly approves the release operation. PyPI upload, installer publishing, hosted gallery, drag/drop import, native platform expansion, full voice mode, rich achievements, and dashboard redesign remain out of scope.
+The v0.6.0 recap export is the shareability release build. It should be tagged or released only after Tony explicitly approves the release operation. PyPI upload, installer publishing, hosted sharing, accounts, public posting from inside the app, native platform expansion, and dashboard redesign remain out of scope.
 
 Scope completed:
 
-- Real Codex pet fixtures discovered under local WSL and Windows Codex stores.
-- Actual editable uv-tool runtime repaired and verified with Pillow present.
-- CLI Codex import supports source-labeled duplicate candidates and direct-path selection.
-- Dashboard Import From Codex supports explicit direct-path choices, custom install names, replace behavior, bridge-offline success feedback, and actionable duplicate-name errors.
-- Live WSL/Windows overlay verification passed with a real Codex-imported pet, including render, bubble/event forwarding, failure/review/attention states, bridge reconnect, and missing-custom-pet fallback.
+- Built the local recap export flow around deterministic recap card rendering and a narrow CLI entry point.
+- Bundled exports as `recap-card.png`, `caption.txt`, and `metadata.json` for manual handoff.
+- Fixed the final visual polish gap so the source window label reads cleanly and the card reads like a product artifact instead of a dashboard screenshot.
+- Added deterministic tests for the recap card renderer and export flow.
+- Bumped package metadata and lockfile version surfaces to `0.6.0`.
 
 Primary evidence:
 
-- Planning packet: `/home/tony/projects/hermes-pet-v0.5.0-planning/`
-- T4 live evidence: `/home/tony/projects/hermes-pet-v0.5.0-planning/t4-live-overlay/evidence-20260520-141938/`
-- Release record: `docs/releases/v0.5.0.md`
+- Planning packet: `/home/tony/projects/hermes-pet-v060/`
+- Review packet: `/home/tony/projects/hermes-pet-v060-impl/`
+- Release record: `docs/releases/v0.6.0.md`
 
 Final approval boundary:
 
