@@ -6,7 +6,7 @@ Date: 2026-05-08
 
 ## Environment
 
-- Local checkout: `/home/tony/projects/hermes-pet`
+- Local checkout: `<repo>`
 - Temporary dashboard state: `/tmp/hermes-dashboard-qa-state-17476`
 - Pet-changing temporary dashboard state: `/tmp/hermes-dashboard-petchange-qa-17477`
 - Dashboard server: `hermes-pet dashboard --no-open --port 17476`
@@ -62,7 +62,7 @@ scripts/smoke-hermes-pet.sh --fresh-install
 scripts/verify-packaged-overlay.sh
 python3 scripts/verify-package-artifacts.py
 scripts/verify-live-overlay.sh
-HERMES_PET_INSTALL_TARGET=/home/tony/projects/hermes-pet scripts/smoke-github-install.sh
+HERMES_PET_INSTALL_TARGET=<repo> scripts/smoke-github-install.sh
 hermes-pet doctor
 ```
 
@@ -82,7 +82,7 @@ Results:
 - `scripts/verify-live-overlay.sh`: passed, including launch, bridge connect,
   custom pet fallback, event forwarding, attention tray, bridge disconnect,
   reconnect, and cleanup.
-- `HERMES_PET_INSTALL_TARGET=/home/tony/projects/hermes-pet scripts/smoke-github-install.sh`: passed.
+- `HERMES_PET_INSTALL_TARGET=<repo> scripts/smoke-github-install.sh`: passed.
 - `hermes-pet doctor`: passed, `Doctor result: ready.`
 
 ## Visual Findings

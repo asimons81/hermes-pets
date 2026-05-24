@@ -60,7 +60,7 @@ node scripts/smoke-renderer.js
 PYTHON=.venv/bin/python scripts/verify-packaged-overlay.sh
 PYTHON=.venv/bin/python scripts/smoke-hermes-pet.sh --temp-state
 PYTHON=.venv/bin/python scripts/verify-live-overlay.sh
-HERMES_PET_INSTALL_TARGET=/home/tony/projects/hermes-pet scripts/smoke-github-install.sh
+HERMES_PET_INSTALL_TARGET=<repo> scripts/smoke-github-install.sh
 ```
 
 Notes:
@@ -92,7 +92,7 @@ readiness release.
 
 ## v0.6.0 Recap Export Release Readiness
 
-The v0.6.0 recap export is the shareability release build. It should be tagged or released only after Tony explicitly approves the release operation. PyPI upload, installer publishing, hosted sharing, accounts, public posting from inside the app, native platform expansion, and dashboard redesign remain out of scope.
+v0.6.0 shipped as the shareability release build. The release stayed local-first, and PyPI upload, installer publishing, hosted sharing, accounts, public posting from inside the app, native platform expansion, and dashboard redesign were left out of scope.
 
 Scope completed:
 
@@ -104,14 +104,14 @@ Scope completed:
 
 Primary evidence:
 
-- Planning packet: `/home/tony/projects/hermes-pet-v060/`
-- Review packet: `/home/tony/projects/hermes-pet-v060-impl/`
+- Planning packet: archived outside the public repo.
+- Review packet: archived outside the public repo.
 - Release record: `docs/releases/v0.6.0.md`
 
-Final approval boundary:
+Final release boundary:
 
-- Local build/test/package/install readiness may be completed before approval.
-- Do not push, tag, create a GitHub Release, publish to PyPI, or produce installer artifacts without Tony's explicit approval.
+- Local build/test/package/install readiness was completed before the release decision.
+- Public release operations were handled separately; PyPI upload and installer artifacts stayed out of scope.
 
 ## v0.3.0 Dashboard Release Readiness
 
@@ -160,7 +160,7 @@ scripts/smoke-hermes-pet.sh --fresh-install
 scripts/verify-packaged-overlay.sh
 python3 scripts/verify-package-artifacts.py
 scripts/verify-live-overlay.sh
-HERMES_PET_INSTALL_TARGET=/home/tony/projects/hermes-pet scripts/smoke-github-install.sh
+HERMES_PET_INSTALL_TARGET=<repo> scripts/smoke-github-install.sh
 hermes-pet doctor
 ```
 
@@ -172,7 +172,7 @@ Results:
   connection, custom pet fallback, success/failure/attention event forwarding,
   attention tray state, bridge disconnect, reconnect, and cleanup.
 - Local GitHub-style install smoke passed with
-  `HERMES_PET_INSTALL_TARGET=/home/tony/projects/hermes-pet`.
+  `HERMES_PET_INSTALL_TARGET=<repo>`.
 - `hermes-pet doctor` reported `Doctor result: ready.`
 
 Release decision: v0.3.0 is ready for an explicit GitHub tag/release operation

@@ -8,12 +8,23 @@ It exists to make long local coding sessions feel more legible and alive. The pe
 
 ## What's New in 0.6.0
 
-v0.6.0 turns a local work session into a shareable recap card with receipts, without adding hosted sharing or accounts.
+v0.6.0 shipped a recap flow that turns a local work session into a shareable recap card with receipts, without adding hosted sharing or accounts.
 
 - `hermes-pet recap export` is the narrow CLI entry point for the recap flow.
-- The export bundle lands as `recap-card.png`, `caption.txt`, and `metadata.json`.
+- The default export lands under `exports/recaps/<timestamp>` in the state dir.
+- `--output-dir` overrides that destination when you want the bundle elsewhere.
+- The export bundle includes `recap-card.png`, `caption.txt`, and `metadata.json`.
 - The renderer is deterministic, so the same session state produces the same recap card.
 - The final polish pass cleaned up the source window label and made the card read like a product artifact instead of a dashboard screenshot.
+
+## Recap export
+
+Use `hermes-pet recap export --since 24h` for a quick recap, or add `--output-dir` when you want to stash the bundle somewhere specific. `--since` accepts windows like `24h`, `7d`, or `30m`.
+
+```bash
+hermes-pet recap export --since 24h
+hermes-pet recap export --since 7d --output-dir /tmp/hermes-pet-recaps
+```
 
 The repo combines a Python CLI, a WebSocket bridge, local state under `~/.hermes_pet`, and a floating Electron overlay for WSL/Windows. The current tool is focused on practical operator use:
 
@@ -46,7 +57,7 @@ Install from the repo, then launch the bridge and overlay:
 pip install 'git+https://github.com/asimons81/hermes-pets.git'
 
 # Or, for local development
-cd /home/tony/projects/hermes-pet
+cd <repo>
 pip install -e .
 
 hermes-pet launch
@@ -76,20 +87,20 @@ not publish to PyPI.
 For editable local development:
 
 ```bash
-cd /home/tony/projects/hermes-pet
+cd <repo>
 pip install -e .
 ```
 
 With `uv`:
 
 ```bash
-uv tool install --editable /home/tony/projects/hermes-pet
+uv tool install --editable <repo>
 ```
 
 Non-editable installs are also supported:
 
 ```bash
-cd /home/tony/projects/hermes-pet
+cd <repo>
 pip install .
 ```
 
@@ -427,7 +438,7 @@ Or set environment defaults:
 
 ```bash
 export HERMES_PET_PROJECT_ID=hermes-pet
-export HERMES_PET_PROJECT_PATH=/home/tony/projects/hermes-pet
+export HERMES_PET_PROJECT_PATH=<repo>
 export HERMES_PET_SESSION_ID=phase-4-local
 export HERMES_PET_SESSION_LABEL="Phase 4 local work"
 ```
@@ -731,7 +742,7 @@ scripts/smoke-hermes-pet.sh --fresh-install
 scripts/verify-packaged-overlay.sh
 python3 scripts/verify-package-artifacts.py
 scripts/verify-live-overlay.sh
-HERMES_PET_INSTALL_TARGET=/home/tony/projects/hermes-pet scripts/smoke-github-install.sh
+HERMES_PET_INSTALL_TARGET=<repo> scripts/smoke-github-install.sh
 hermes-pet doctor
 ```
 
@@ -745,7 +756,7 @@ voice test adapter, and capturing desktop plus narrow/mobile screenshots.
 Optional Bash helpers live in `shell-helpers/hermes-pet.bash`:
 
 ```bash
-source /home/tony/projects/hermes-pet/shell-helpers/hermes-pet.bash
+source <repo>/shell-helpers/hermes-pet.bash
 ```
 
 They provide:

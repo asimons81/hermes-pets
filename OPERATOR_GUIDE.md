@@ -96,6 +96,18 @@ change pet, preferences, voice, achievements, empty states, populated states,
 cancel confirmation, and API error states. There should be no overlapping
 controls, clipped text, blank placeholder panels, or marketing-page layout.
 
+
+## Recap export
+
+Use `hermes-pet recap export --since 24h` for a quick recap, or add `--output-dir` when you want the bundle somewhere specific. `--since` accepts windows like `24h`, `7d`, or `30m`.
+
+```bash
+hermes-pet recap export --since 24h
+hermes-pet recap export --since 7d --output-dir /tmp/hermes-pet-recaps
+```
+
+By default, the bundle lands at `exports/recaps/<timestamp>` under the state dir and includes `recap-card.png`, `caption.txt`, and `metadata.json`.
+
 ## Phase 2 Manual Live Overlay Verification
 
 Use this checklist before calling Phase 2 overlay behavior ready. Run it from
@@ -187,7 +199,7 @@ Set defaults once per shell when a work session should be grouped:
 
 ```bash
 export HERMES_PET_PROJECT_ID=hermes-pet
-export HERMES_PET_PROJECT_PATH=/home/tony/projects/hermes-pet
+export HERMES_PET_PROJECT_PATH=<repo>
 export HERMES_PET_SESSION_ID=phase-4-local
 export HERMES_PET_SESSION_LABEL="Phase 4 local work"
 ```

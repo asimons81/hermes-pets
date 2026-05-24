@@ -18,7 +18,7 @@ Use this as the capture checklist for the first private repo post and demo.
 ## Demo Commands
 
 ```bash
-cd /home/tony/projects/hermes-pet
+cd <repo>
 hermes-pet doctor
 hermes-pet launch --replace
 hermes-pet emit bubble "Starting the Hermes Pets demo"
@@ -62,7 +62,7 @@ overlay after selection so the demo shows both package inspection and real load.
 #!/usr/bin/env bash
 set -euo pipefail
 
-cd /home/tony/projects/hermes-pet
+cd <repo>
 hermes-pet doctor
 hermes-pet launch --replace
 hermes-pet emit bubble "Hermes Pets is live"

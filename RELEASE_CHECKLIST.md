@@ -1,6 +1,6 @@
 # Hermes Pets Release Checklist
 
-Use this before a public release candidate. Do not push, tag, or publish from this checklist unless that is the explicit release task.
+Use this for release prep and verification. Do not push, tag, or publish from this checklist unless the release task explicitly asks for it.
 
 ## Repository
 
@@ -126,8 +126,8 @@ HERMES_PET_HOME="$(mktemp -d)" hermes-pet custom-pet import-codex <slug|latest|p
 - Confirm duplicate WSL/Windows Codex candidates show source labels and dashboard explicit choices use direct paths.
 - Confirm dashboard Import From Codex handles empty state, populated state, latest, custom install name, duplicate without replace, duplicate with replace, use-after-import, bridge offline feedback, and selected custom pet sprite rendering.
 - Confirm a live WSL/Windows overlay run proves a Codex-imported pet renders, event/bubble/failure/attention states don't blank it, bridge reconnect works, and removal/missing-custom-pet fallback survives.
-- Use the evidence path in `docs/releases/v0.5.0.md` for the final approval packet.
-- Do not push, tag, publish a GitHub Release, upload to PyPI, build an installer, or claim native platform expansion without explicit Tony approval.
+- Use the evidence path in `docs/releases/v0.5.0.md` for the final release packet.
+- Do not push, tag, publish a GitHub Release, upload to PyPI, build an installer, or claim native platform expansion without explicit approval.
 
 ## v0.3.0 Dashboard Release Closeout
 
@@ -163,7 +163,7 @@ scripts/smoke-hermes-pet.sh --fresh-install
 scripts/verify-packaged-overlay.sh
 python3 scripts/verify-package-artifacts.py
 scripts/verify-live-overlay.sh
-HERMES_PET_INSTALL_TARGET=/home/tony/projects/hermes-pet scripts/smoke-github-install.sh
+HERMES_PET_INSTALL_TARGET=<repo> scripts/smoke-github-install.sh
 hermes-pet doctor
 ```
 

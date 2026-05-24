@@ -114,4 +114,4 @@ are reviewed repository contributions.
 - Large rewrites without prior discussion.
 - Breaking CLI changes without migration notes.
 - Generated assets with unclear licensing.
-- Changes that assume Tony's private Hermes setup, private config, or local machine paths.
+- Changes that assume a maintainer's private Hermes setup, private config, or local machine paths.

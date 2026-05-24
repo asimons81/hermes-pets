@@ -47,13 +47,13 @@ Snapshot date: 2026-05-24
 - Bash helpers and a smoke script are available for daily operation.
 - A temp-state smoke mode and a fresh GitHub install smoke script are available for release confidence.
 - WSL2/Windows with Windows interop is the supported full-overlay platform; native Linux, macOS, and native Windows are documented as investigation targets only.
-- v0.6.0 recap export is prepared as the shareability release: local recap card exports can be rendered, bundled, and validated end to end with temp-state evidence. Public release operations still need Tony approval before push, tag, GitHub Release, PyPI, or installer work.
+- v0.6.0 recap export shipped as the shareability release: local recap card exports can be rendered, bundled, and validated end to end with temp-state evidence. The default bundle lands under `exports/recaps/<timestamp>` in the state dir and includes `recap-card.png`, `caption.txt`, and `metadata.json`.
 
 ## Key Commands
 
 ```bash
 pip install -e .
-uv tool install --editable /home/tony/projects/hermes-pet
+uv tool install --editable <repo>
 hermes-pet
 hermes-pet status
 hermes-pet custom-pet list
@@ -87,6 +87,8 @@ hermes-pet state export --since 24h
 hermes-pet state cleanup --dry-run
 hermes-pet brief --since 24h
 hermes-pet brief --emit
+hermes-pet recap export --since 24h
+hermes-pet recap export --since 7d --output-dir <path>
 hermes-pet doctor
 hermes-pet doctor --strict
 node scripts/smoke-renderer.js
@@ -94,10 +96,12 @@ scripts/smoke-hermes-pet.sh --temp-state
 scripts/smoke-github-install.sh
 ```
 
+Recap export writes `recap-card.png`, `caption.txt`, and `metadata.json` to `exports/recaps/<timestamp>` under the state dir by default; `--output-dir` overrides the destination.
+
 Optional shell helpers:
 
 ```bash
-source /home/tony/projects/hermes-pet/shell-helpers/hermes-pet.bash
+source <repo>/shell-helpers/hermes-pet.bash
 hp
 hpl
 hps
@@ -161,8 +165,8 @@ hpbrief
 
 ## Next Recommended Improvements
 
-- If Tony approves the public release, push the prepared commits, create/tag `v0.6.0`, and draft the GitHub Release. Do not publish to PyPI or build an installer unless separately approved.
-- Keep PR #71 / macOS work out of the v0.6.0 release train; native platform expansion is still a later investigation target.
+- v0.6.0 recap export shipped as the shareability release; PyPI and installer publishing stayed out of scope.
+- Keep PR #71 / macOS work out of the v0.6.0 release train; native platform expansion remains a later investigation target.
 - Add deeper live overlay checks for drag ergonomics, always-on-top behavior, and multi-monitor/DPI setups.
 - Add richer custom pet preview controls such as playback speed and side-by-side state comparison.
 - Add an automated backup helper around `${HERMES_PET_HOME:-~/.hermes_pet}` once the manual copy/restore workflow has enough field use.

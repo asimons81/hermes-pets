@@ -1,13 +1,12 @@
-# Hermes Pets Clean Install Rehearsal
+# Archived Hermes Pets Clean Install Rehearsal
 
 Date: 2026-05-05
 
-This rehearsal verifies a non-editable install from a fresh environment outside
-the repository. It does not push, tag, publish, or add remotes.
+This is historical evidence from 2026-05-05. It verified a non-editable install from a fresh environment outside the repository and is not current install guidance. It did not push, tag, publish, or add remotes.
 
 ## Supported Install Path
 
-For Phase 5, GitHub install remains the supported public install path:
+For the Phase 5 rehearsal, GitHub install was the supported public install path:
 
 ```bash
 python3 -m venv /tmp/hermes-pet-release-rehearsal-venv
@@ -16,7 +15,7 @@ python3 -m venv /tmp/hermes-pet-release-rehearsal-venv
 /tmp/hermes-pet-release-rehearsal-venv/bin/hermes-pet --help
 ```
 
-PyPI packaging can be rehearsed and improved, but Phase 5 does not publish to
+PyPI packaging can be rehearsed and improved, but this rehearsal did not publish to
 PyPI or treat `pip install hermes-pet` as the supported install path.
 
 For this local release-candidate rehearsal, the package was installed
@@ -24,7 +23,7 @@ non-editably from the repository path:
 
 ```bash
 python3 -m venv /tmp/hermes-pet-release-rehearsal-20260505-1745-venv
-/tmp/hermes-pet-release-rehearsal-20260505-1745-venv/bin/python -m pip install /home/tony/projects/hermes-pet
+/tmp/hermes-pet-release-rehearsal-20260505-1745-venv/bin/python -m pip install <repo>
 ```
 
 The installed wheel was `hermes_pet-0.1.0-py3-none-any.whl`; `websockets-16.0`
@@ -54,7 +53,7 @@ HERMES_PET_PORT=18473 \
 
 ```bash
 python3 -m venv /tmp/hermes-pet-release-rehearsal-20260505-1745-venv
-/tmp/hermes-pet-release-rehearsal-20260505-1745-venv/bin/python -m pip install /home/tony/projects/hermes-pet
+/tmp/hermes-pet-release-rehearsal-20260505-1745-venv/bin/python -m pip install <repo>
 
 cd /tmp
 HERMES_PET_HOME=/tmp/hermes-pet-release-rehearsal-20260505-1745-state HERMES_PET_FORCE_PACKAGED_OVERLAY=1 HERMES_PET_PORT=18473 /tmp/hermes-pet-release-rehearsal-20260505-1745-venv/bin/hermes-pet --help
@@ -63,7 +62,7 @@ HERMES_PET_HOME=/tmp/hermes-pet-release-rehearsal-20260505-1745-state HERMES_PET
 
 env PATH=/tmp/hermes-pet-release-rehearsal-20260505-1745-venv/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin:/mnt/c/Windows/System32/WindowsPowerShell/v1.0:/mnt/c/Windows/system32 HERMES_PET_HOME=/tmp/hermes-pet-release-rehearsal-20260505-1745-state HERMES_PET_FORCE_PACKAGED_OVERLAY=1 HERMES_PET_PORT=18473 /tmp/hermes-pet-release-rehearsal-20260505-1745-venv/bin/hermes-pet doctor
 
-/tmp/hermes-pet-release-rehearsal-20260505-1745-venv/bin/python /home/tony/projects/hermes-pet/scripts/package-custom-pet.py --builtin-species fox --name install-rehearsal-fox --output /tmp/hermes-pet-release-rehearsal-20260505-1745-fixture
+/tmp/hermes-pet-release-rehearsal-20260505-1745-venv/bin/python <repo>/scripts/package-custom-pet.py --builtin-species fox --name install-rehearsal-fox --output /tmp/hermes-pet-release-rehearsal-20260505-1745-fixture
 HERMES_PET_HOME=/tmp/hermes-pet-release-rehearsal-20260505-1745-state HERMES_PET_FORCE_PACKAGED_OVERLAY=1 HERMES_PET_PORT=18473 /tmp/hermes-pet-release-rehearsal-20260505-1745-venv/bin/hermes-pet custom-pet validate /tmp/hermes-pet-release-rehearsal-20260505-1745-fixture
 
 find /tmp/hermes-pet-release-rehearsal-20260505-1745-state/cache/overlay -maxdepth 3 -type f | sort | sed -n "1,120p"
@@ -75,14 +74,13 @@ env PATH=/tmp/hermes-pet-release-rehearsal-20260505-1745-venv/bin:/usr/local/sbi
 env PATH=/tmp/hermes-pet-release-rehearsal-20260505-1745-venv/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin:/mnt/c/Windows/System32/WindowsPowerShell/v1.0:/mnt/c/Windows/system32 HERMES_PET_HOME=/tmp/hermes-pet-release-rehearsal-20260505-1745-state HERMES_PET_FORCE_PACKAGED_OVERLAY=1 HERMES_PET_PORT=18473 /tmp/hermes-pet-release-rehearsal-20260505-1745-venv/bin/hermes-pet overlay-status
 ```
 
-For repeatable Phase 5 GitHub install rehearsal, use:
+For the archived Phase 5 GitHub install rehearsal, use:
 
 ```bash
 scripts/smoke-github-install.sh
 ```
 
-Set `HERMES_PET_INSTALL_TARGET` for a branch, tag, fork, or local path while
-keeping the same smoke workflow.
+In the archived rehearsal, set `HERMES_PET_INSTALL_TARGET` for a branch, tag, fork, or local path while keeping the same smoke workflow.
 
 ## Passed
 
@@ -118,6 +116,6 @@ keeping the same smoke workflow.
 - `emit` requires a running bridge. Use `launch` before treating `emit` as a live
   overlay smoke test.
 - The Windows Electron dependency cache is shared at
-  `C:\Users\asimo\AppData\Local\HermesAgent\pet-overlay-electron`, but the
+  `%LOCALAPPDATA%\HermesAgent\pet-overlay-electron`, but the
   overlay process itself was matched and controlled by the temp packaged overlay
   path, avoiding the normal installed Hermes Pets state.
