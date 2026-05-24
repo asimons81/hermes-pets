@@ -1,0 +1,380 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Hermes Pets, a desktop companion layer for Hermes Agent operators</title>
+  <meta name="description" content="Hermes Pets is a local desktop companion for Hermes Agent operators, with a transparent Electron overlay, a Python websocket bridge, custom pet packs, and a guarded update flow.">
+  <meta name="theme-color" content="#060814">
+  <meta property="og:title" content="Hermes Pets">
+  <meta property="og:description" content="A desktop companion layer for Hermes Agent operators.">
+  <meta property="og:image" content="./assets/hero-banner.webp">
+  <meta name="twitter:card" content="summary_large_image">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;600;700&family=Space+Grotesk:wght@500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="./styles.css">
+</head>
+<body>
+  <div class="backdrop" aria-hidden="true">
+    <span class="orb orb-a"></span>
+    <span class="orb orb-b"></span>
+    <span class="orb orb-c"></span>
+    <span class="grid"></span>
+  </div>
+
+  <main class="page" id="top">
+    <header class="topbar">
+      <a class="brand" href="#top" aria-label="Hermes Pets home">
+        <span class="brand-mark" aria-hidden="true">HP</span>
+        <span class="brand-copy">
+          <strong>Hermes Pets</strong>
+          <small>desktop companion layer</small>
+        </span>
+      </a>
+
+      <nav class="topnav" aria-label="Primary navigation">
+        <a href="#does">What it does</a>
+        <a href="#pets">Pets</a>
+        <a href="#install">Install</a>
+        <a href="#releases">Releases</a>
+      </nav>
+
+      <a class="ghost-link" href="https://github.com/asimons81/hermes-pets" rel="noreferrer noopener">GitHub</a>
+    </header>
+
+    <section class="hero section-pad">
+      <div class="hero-copy">
+        <p class="eyebrow">v0.6.1, local first, WSL2 plus Windows</p>
+        <h1>A desktop companion layer<br>for <span>Hermes Agent</span><br>operators.</h1>
+        <p class="lede">
+          Transparent Electron overlay, Python WebSocket bridge, and real sprite packs that keep Hermes visible while you work. No cloud account, no fake dashboard, no bullshit.
+        </p>
+
+        <div class="cta-row">
+          <a class="button button-primary" href="#install">Get the commands</a>
+          <a class="button button-secondary" href="https://github.com/asimons81/hermes-pets#readme" rel="noreferrer noopener">Read the repo</a>
+        </div>
+
+        <ul class="pill-row" aria-label="Product highlights">
+          <li>Transparent overlay</li>
+          <li>Local bridge</li>
+          <li>Custom pet packs</li>
+          <li>Guarded updates</li>
+        </ul>
+
+        <div class="hero-metrics" aria-label="Release and platform notes">
+          <div class="metric-card">
+            <span>Current release</span>
+            <strong>0.6.1</strong>
+            <small>Curated custom pet gallery with Freddy, Jason, Leatherface, and Haskell.</small>
+          </div>
+          <div class="metric-card">
+            <span>Supported full overlay path</span>
+            <strong>WSL2 on Windows</strong>
+            <small>Windows interop opens the Electron overlay from the WSL CLI.</small>
+          </div>
+          <div class="metric-card">
+            <span>Local state</span>
+            <strong>~/.hermes_pet</strong>
+            <small>Use <code>HERMES_PET_HOME</code> for isolation.</small>
+          </div>
+        </div>
+      </div>
+
+      <div class="hero-visual">
+        <figure class="glass-card hero-banner">
+          <img src="./assets/hero-banner.webp" alt="Hermes Pets banner screenshot showing the desktop overlay and feature callouts">
+          <figcaption>
+            <span>Real repo capture</span>
+            <span>transparent overlay</span>
+            <span>local pet bridge</span>
+          </figcaption>
+        </figure>
+
+        <div class="hero-support-grid">
+          <figure class="glass-card support-card support-card-left">
+            <img src="./assets/launch-bubble.webp" alt="Hermes Pets launch bubble screenshot with a fox pet reacting to a local command">
+            <figcaption>
+              <span class="support-label">Launch feedback</span>
+              <strong>Local command, live bubble</strong>
+              <p>The pet reacts right on the desktop when Hermes emits a message.</p>
+            </figcaption>
+          </figure>
+          <figure class="glass-card support-card support-card-right">
+            <img src="./assets/review-tray.webp" alt="Hermes Pets review tray screenshot showing job history and review-needed state">
+            <figcaption>
+              <span class="support-label">Operator tray</span>
+              <strong>Job history and review state</strong>
+              <p>Attention needed, job finished, and brief summaries stay visible.</p>
+            </figcaption>
+          </figure>
+        </div>
+      </div>
+    </section>
+
+    <section class="section" id="does">
+      <div class="section-head split-head">
+        <div>
+          <p class="eyebrow">What it does</p>
+          <h2>It turns local Hermes activity into a visible companion layer.</h2>
+        </div>
+        <p>
+          The overlay is transparent, always on top, draggable, and fed by a local WebSocket bridge. Sprite manifests define frame counts, frame rates, looping, and fallback behavior, so idle, hover, drag, run, review, jump, fail, and bubble states stay deterministic.
+        </p>
+      </div>
+
+      <div class="feature-grid">
+        <article class="feature-card">
+          <span class="feature-index">01</span>
+          <h3>Transparent Electron overlay</h3>
+          <p>Frameless, transparent, and always on top. It sits on the desktop without pretending to be a dashboard.</p>
+        </article>
+        <article class="feature-card">
+          <span class="feature-index">02</span>
+          <h3>Python WebSocket bridge</h3>
+          <p>The overlay listens to a local bridge and reconnects cleanly when the socket blips. No cloud hop.</p>
+        </article>
+        <article class="feature-card">
+          <span class="feature-index">03</span>
+          <h3>Manifested sprite states</h3>
+          <p>Sprite packs declare fps, loop behavior, and fallback state rules for idle, drag, hover, and message reactions.</p>
+        </article>
+        <article class="feature-card">
+          <span class="feature-index">04</span>
+          <h3>Custom pet packs</h3>
+          <p>Packages live under <code>${HERMES_PET_HOME:-~/.hermes_pet}/custom-pets/&lt;pet-name&gt;/</code> and can be validated before use.</p>
+        </article>
+        <article class="feature-card">
+          <span class="feature-index">05</span>
+          <h3>Guarded update flow</h3>
+          <p><code>update --check</code> and <code>--dry-run</code> let you see the move before anything mutates the tree.</p>
+        </article>
+        <article class="feature-card">
+          <span class="feature-index">06</span>
+          <h3>Local dashboard and diagnostics</h3>
+          <p><code>doctor</code>, <code>overlay-status</code>, and the localhost dashboard keep the operator loop honest.</p>
+        </article>
+      </div>
+    </section>
+
+    <section class="section section-reality">
+      <div class="reality-callout">
+        <p class="eyebrow">Reality check</p>
+        <h2>Local-first means local-first.</h2>
+        <p>
+          No hosted gallery. No remote upload flow. No cloud account. The repo also says native Linux, macOS, and native Windows overlay support are still investigation targets, while WSL2 on Windows is the supported full experience.
+        </p>
+      </div>
+      <div class="reality-points">
+        <div>
+          <strong>Local state</strong>
+          <p>Pet data lives under <code>~/.hermes_pet</code> by default, with <code>HERMES_PET_HOME</code> for isolation.</p>
+        </div>
+        <div>
+          <strong>Private dashboard</strong>
+          <p>The operator console binds to localhost only and uses a per-process token. It is not a hosted surface.</p>
+        </div>
+        <div>
+          <strong>Public install path</strong>
+          <p>The supported public install flow in the repo is GitHub-based, not a PyPI or installer release.</p>
+        </div>
+      </div>
+    </section>
+
+    <section class="section" id="pets">
+      <div class="section-head">
+        <p class="eyebrow">Pet showcase</p>
+        <h2>Real sprites, real packs, no fake merch-sheet theater.</h2>
+        <p>
+          The repo ships built-in overlay species and curated custom packages. These previews use actual assets from the repository, including sprite frames and contact sheets.
+        </p>
+      </div>
+
+      <div class="showcase-block">
+        <div class="showcase-label">Built-in overlay species</div>
+        <div class="pet-grid built-in-grid">
+          <article class="pet-card pet-card-sprite">
+            <img src="./assets/pets/cat-idle.png" alt="Built-in cat idle sprite from the overlay asset pack">
+            <div class="pet-card-copy">
+              <strong>Cat</strong>
+              <span>overlay/assets/sprites/cat</span>
+            </div>
+          </article>
+          <article class="pet-card pet-card-sprite">
+            <img src="./assets/pets/fox-idle.png" alt="Built-in fox idle sprite from the overlay asset pack">
+            <div class="pet-card-copy">
+              <strong>Fox</strong>
+              <span>overlay/assets/sprites/fox</span>
+            </div>
+          </article>
+          <article class="pet-card pet-card-sprite">
+            <img src="./assets/pets/ghost-idle.png" alt="Built-in ghost idle sprite from the overlay asset pack">
+            <div class="pet-card-copy">
+              <strong>Ghost</strong>
+              <span>overlay/assets/sprites/ghost</span>
+            </div>
+          </article>
+          <article class="pet-card pet-card-sprite">
+            <img src="./assets/pets/dragon-idle.png" alt="Built-in dragon idle sprite from the overlay asset pack">
+            <div class="pet-card-copy">
+              <strong>Dragon</strong>
+              <span>overlay/assets/sprites/dragon</span>
+            </div>
+          </article>
+        </div>
+      </div>
+
+      <div class="showcase-block">
+        <div class="showcase-label">Curated custom packs</div>
+        <div class="pet-grid custom-grid">
+          <article class="pet-card pet-card-sheet">
+            <img src="./assets/pets/freddy-sheets.webp" alt="Freddy custom pet sprite sheet showing multiple animation frames">
+            <div class="pet-card-copy">
+              <strong>Freddy</strong>
+              <span>docs/custom-pets/freddy</span>
+            </div>
+          </article>
+          <article class="pet-card pet-card-sheet">
+            <img src="./assets/pets/jason-sheets.webp" alt="Jason custom pet sprite sheet showing multiple animation frames">
+            <div class="pet-card-copy">
+              <strong>Jason</strong>
+              <span>docs/custom-pets/jason</span>
+            </div>
+          </article>
+          <article class="pet-card pet-card-sheet">
+            <img src="./assets/pets/leatherface-sheet.png" alt="Leatherface custom pet contact sheet showing multiple animation states">
+            <div class="pet-card-copy">
+              <strong>Leatherface</strong>
+              <span>docs/custom-pets/leatherface</span>
+            </div>
+          </article>
+          <article class="pet-card pet-card-sheet">
+            <img src="./assets/pets/haskell-sheet.webp" alt="Haskell custom pet contact sheet showing multiple animation states">
+            <div class="pet-card-copy">
+              <strong>Haskell</strong>
+              <span>docs/custom-pets/haskell</span>
+            </div>
+          </article>
+        </div>
+      </div>
+    </section>
+
+    <section class="section" id="install">
+      <div class="section-head split-head">
+        <div>
+          <p class="eyebrow">Operator install and use</p>
+          <h2>Verified commands only, no made-up workflow garnish.</h2>
+        </div>
+        <p>
+          The repo supports local editable installs, a GitHub install path, the launch bridge, custom pet validation, and the guarded update flow.
+        </p>
+      </div>
+
+      <div class="install-shell">
+        <div class="tab-row" role="tablist" aria-label="Install command sets">
+          <button class="tab-button is-active" type="button" role="tab" aria-selected="true" aria-controls="panel-users" id="tab-users" data-tab="users">For users</button>
+          <button class="tab-button" type="button" role="tab" aria-selected="false" aria-controls="panel-dev" id="tab-dev" data-tab="dev">For developers</button>
+        </div>
+
+        <div class="install-panels">
+          <section class="install-panel is-active" id="panel-users" role="tabpanel" aria-labelledby="tab-users" data-panel="users">
+            <div class="terminal-card">
+              <div class="terminal-top">
+                <span>User install</span>
+                <button class="copy-button" type="button" data-copy-target="users-code">Copy</button>
+              </div>
+              <pre><code id="users-code">python3 -m pip install 'git+https://github.com/asimons81/hermes-pets.git'
+hermes-pet launch
+hermes-pet doctor</code></pre>
+            </div>
+            <div class="install-notes">
+              <article class="note-card">
+                <h3>What this is for</h3>
+                <p>The public install path from the repo, then the local launch and diagnostics commands you actually run.</p>
+              </article>
+              <article class="note-card">
+                <h3>Operator note</h3>
+                <p>The overlay is local and stateful, so if the bridge is already up, launch reuses the live path instead of pretending to be stateless theater.</p>
+              </article>
+            </div>
+          </section>
+
+          <section class="install-panel" id="panel-dev" role="tabpanel" aria-labelledby="tab-dev" data-panel="dev" hidden>
+            <div class="terminal-card">
+              <div class="terminal-top">
+                <span>Developer workflow</span>
+                <button class="copy-button" type="button" data-copy-target="dev-code">Copy</button>
+              </div>
+              <pre><code id="dev-code">cd &lt;repo&gt;
+pip install -e .
+hermes-pet custom-pet validate docs/custom-pets/freddy
+hermes-pet update --check</code></pre>
+            </div>
+            <div class="install-notes">
+              <article class="note-card">
+                <h3>What this is for</h3>
+                <p>Editable local development, custom pet validation, and the guarded update flow before you touch anything on disk.</p>
+              </article>
+              <article class="note-card">
+                <h3>Scope</h3>
+                <p>Use this when you’re working on the repo itself, not when you just want to launch the companion.</p>
+              </article>
+            </div>
+          </section>
+        </div>
+      </div>
+    </section>
+
+    <section class="section" id="releases">
+      <div class="section-head compact-head">
+        <p class="eyebrow">Release and status strip</p>
+        <h2>The repo has an actual release trail.</h2>
+        <p>It is not a vaporware brochure. The changelog shows how the product got here.</p>
+      </div>
+
+      <div class="release-timeline" aria-label="Recent releases">
+        <article class="release-featured">
+          <div class="release-badge">Current release</div>
+          <h3>v0.6.1</h3>
+          <p>Curated custom pet gallery, with Freddy, Jason, Leatherface, and Haskell in the repo.</p>
+        </article>
+
+        <div class="release-list">
+          <article class="release-row">
+            <span class="release-version">v0.6.0</span>
+            <p>Recap export flow.</p>
+          </article>
+          <article class="release-row">
+            <span class="release-version">v0.5.0</span>
+            <p>Codex pet import and activation.</p>
+          </article>
+          <article class="release-row">
+            <span class="release-version">v0.4.0</span>
+            <p>Guarded update command.</p>
+          </article>
+          <article class="release-row">
+            <span class="release-version">v0.3.0</span>
+            <p>Token-protected local dashboard.</p>
+          </article>
+        </div>
+      </div>
+    </section>
+
+    <footer class="footer">
+      <div>
+        <strong>pets.tonysimons.dev</strong>
+        <p>Built from real repo assets, real commands, and real release notes. <span data-year></span></p>
+      </div>
+      <div class="footer-links">
+        <a href="https://github.com/asimons81/hermes-pets" rel="noreferrer noopener">GitHub</a>
+        <a href="https://github.com/asimons81/hermes-pets#readme" rel="noreferrer noopener">README</a>
+        <a href="https://github.com/asimons81/hermes-pets/blob/main/CHANGELOG_LOCAL.md" rel="noreferrer noopener">Changelog</a>
+      </div>
+    </footer>
+  </main>
+
+  <div class="toast" role="status" aria-live="polite" aria-atomic="true"></div>
+  <script src="./app.js"></script>
+</body>
+</html>

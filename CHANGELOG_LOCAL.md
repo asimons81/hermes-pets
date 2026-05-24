@@ -14,7 +14,7 @@ This file records local implementation milestones and release-candidate notes al
 
 ### Added
 
-- Added the curated custom pet gallery under `docs/custom-pets/` with Freddy and Jason as repository-backed downloadable packages.
+- Added the curated custom pet gallery under `docs/custom-pets/` with Freddy, Jason, and Leatherface as repository-backed downloadable packages.
 - Added per-pet READMEs, a gallery index, and a release checklist so future custom pets can be added without inventing a new workflow.
 - Added a public release note for the gallery release.
 

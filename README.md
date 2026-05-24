@@ -6,13 +6,13 @@ Hermes Pets is a local desktop companion for Hermes-style daily work: a small an
 
 It exists to make long local coding sessions feel more legible and alive. The pet gives visible feedback when work starts, finishes, fails, needs attention, or goes quiet, without requiring a hosted service or remote account.
 
-## What's New in 0.6.1
+## Custom pet gallery
 
-v0.6.1 ships the curated custom pet gallery with Freddy and Jason as repo-backed packages. The release also adds a gallery index and a release checklist so more custom pets can be added without inventing a new workflow.
+The curated custom pet gallery now includes Freddy, Jason, and Leatherface as repo-backed packages. The gallery index and release checklist keep future custom pets on the same track without inventing a new workflow.
 
 - `docs/custom-pets/` now tracks the curated gallery entries.
 - `docs/custom-pets/release-checklist.md` captures the add-a-new-pet workflow.
-- Freddy and Jason ship as downloadable packages in the repo.
+- Freddy, Jason, and Leatherface ship as downloadable packages in the repo.
 
 ## Recap export
 
@@ -289,7 +289,7 @@ activating, clearing, or removing installed custom pet packages.
 
 Codex-created pets have a shortcut path: `custom-pet codex` discovers valid Codex desktop pets in `CODEX_HOME/pets`, `~/.codex/pets`, and `/mnt/c/Users/*/.codex/pets`, then `custom-pet import-codex <slug|latest|path> --use` imports and activates one without copy-pasting long paths. The Codex custom-pet trust path hardens duplicate WSL/Windows candidates with source labels, lets explicit dashboard choices submit direct paths, and reports bridge-offline state honestly after selection. Pass `--include-repo-output` only when you intentionally want to scan old repo-local `output/hermes-pet-hatch/` or `output/hatch-pet-runs/` candidates.
 
-The curated gallery entries that ship with the repo live under `docs/custom-pets/`. Freddy and Jason are the first downloadable packages there, and `docs/custom-pets/release-checklist.md` captures the add-a-new-pet workflow so future custom pets stay consistent.
+The curated gallery entries that ship with the repo live under `docs/custom-pets/`. Freddy, Jason, Leatherface, and Haskell are the downloadable packages there, and `docs/custom-pets/release-checklist.md` captures the add-a-new-pet workflow so future custom pets stay consistent.
 
 For a safe preview workflow, validate or package the pet, inspect the generated contact sheet when present, then run `hermes-pet custom-pet preview <path> --output /tmp/pet-preview.html`. To prove the bridge and renderer can load the package, import and activate it inside a temporary `HERMES_PET_HOME` and run `scripts/verify-live-overlay.sh` or launch with `hermes-pet launch --replace`.
 

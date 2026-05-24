@@ -2,6 +2,12 @@
 
 Jason is a curated Hermes Pets custom pet package imported from user-owned Codex pet assets and prepared for repository distribution.
 
+## Preview
+
+![Jason preview sheet](spritesheet.webp)
+
+This repo uses the real Codex spritesheet as the preview until we capture a live overlay screenshot.
+
 ## Included states
 
 - `failed`
