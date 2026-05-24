@@ -26,6 +26,52 @@ if (-not (Test-Path $sourceMainJs)) {
   throw "Windows overlay entrypoint not found: $sourceMainJs"
 }
 
+function Enter-HermesOverlayLaunchLock {
+  param(
+    [Parameter(Mandatory = $true)]
+    [int]$Port,
+
+    [int]$TimeoutSeconds = 60
+  )
+
+  $lockName = "Global\HermesPetsOverlay-$Port"
+  $mutex = New-Object System.Threading.Mutex($false, $lockName)
+  $acquired = $false
+  try {
+    try {
+      $acquired = $mutex.WaitOne([TimeSpan]::FromSeconds($TimeoutSeconds))
+    } catch [System.Threading.AbandonedMutexException] {
+      $acquired = $true
+    }
+
+    if (-not $acquired) {
+      throw "Timed out waiting for Hermes overlay launch lock: $lockName"
+    }
+
+    return $mutex
+  } catch {
+    $mutex.Dispose()
+    throw
+  }
+}
+
+function Exit-HermesOverlayLaunchLock {
+  param([System.Threading.Mutex]$Mutex)
+
+  if (-not $Mutex) {
+    return
+  }
+
+  try {
+    [void]$Mutex.ReleaseMutex()
+  } catch {
+    Write-Warning "Could not release Hermes overlay launch lock: $($_.Exception.Message)"
+  } finally {
+    $Mutex.Dispose()
+  }
+}
+
+
 function Get-HermesOverlayProcesses {
   $targetMains = @(
     [System.IO.Path]::GetFullPath($mainJs),
@@ -176,47 +222,54 @@ if ($Status) {
   exit 0
 }
 
-if ($Stop) {
-  if ($existing.Count -eq 0) {
+
+$launchLock = $null
+try {
+  $launchLock = Enter-HermesOverlayLaunchLock -Port $Port
+
+  $existing = @(Get-HermesOverlayProcesses)
+
+  if ($Stop) {
+    if ($existing.Count -eq 0) {
+      Write-Output "Overlay processes: none"
+      Write-Output "Electron cache: $cacheRoot"
+      return
+    }
+
+    Write-Output "Stopping Hermes Windows pet overlay process tree(s): $($existing.ProcessId -join ', ')"
+    $stopped = Stop-HermesOverlayProcesses -Roots $existing
+    $existing = @(Get-HermesOverlayProcesses)
+    if ($existing.Count -gt 0) {
+      throw "Could not stop existing Hermes overlay process(es): $($existing.ProcessId -join ', ')"
+    }
     Write-Output "Overlay processes: none"
     Write-Output "Electron cache: $cacheRoot"
-    exit 0
+    return
   }
 
-  Write-Output "Stopping Hermes Windows pet overlay process tree(s): $($existing.ProcessId -join ', ')"
-  $stopped = Stop-HermesOverlayProcesses -Roots $existing
-  $existing = @(Get-HermesOverlayProcesses)
+  if ($existing.Count -gt 0 -and $Replace) {
+    Write-Output "Stopping existing Hermes Windows pet overlay process tree(s): $($existing.ProcessId -join ', ')"
+    $stopped = Stop-HermesOverlayProcesses -Roots $existing
+    $existing = @(Get-HermesOverlayProcesses)
+    if ($existing.Count -gt 0) {
+      throw "Could not stop existing Hermes overlay process(es): $($existing.ProcessId -join ', ')"
+    }
+  }
+
   if ($existing.Count -gt 0) {
-    throw "Could not stop existing Hermes overlay process(es): $($existing.ProcessId -join ', ')"
+    Write-Output "Hermes Windows pet overlay already running (pid $($existing.ProcessId -join ', ')); reusing existing instance."
+    Write-Output "Use 'hermes-pet launch --replace' to restart the overlay."
+    Write-Output "Electron cache: $cacheRoot"
+    Write-Output "Bridge URL: ws://127.0.0.1:$Port"
+    return
   }
-  Write-Output "Overlay processes: none"
-  Write-Output "Electron cache: $cacheRoot"
-  exit 0
-}
 
-if ($existing.Count -gt 0 -and $Replace) {
-  Write-Output "Stopping existing Hermes Windows pet overlay process tree(s): $($existing.ProcessId -join ', ')"
-  $stopped = Stop-HermesOverlayProcesses -Roots $existing
-  $existing = @(Get-HermesOverlayProcesses)
-  if ($existing.Count -gt 0) {
-    throw "Could not stop existing Hermes overlay process(es): $($existing.ProcessId -join ', ')"
+  if (-not (Test-Path $cacheRoot)) {
+    New-Item -ItemType Directory -Path $cacheRoot | Out-Null
   }
-}
 
-if ($existing.Count -gt 0) {
-  Write-Output "Hermes Windows pet overlay already running (pid $($existing.ProcessId -join ', ')); reusing existing instance."
-  Write-Output "Use 'hermes-pet launch --replace' to restart the overlay."
-  Write-Output "Electron cache: $cacheRoot"
-  Write-Output "Bridge URL: ws://127.0.0.1:$Port"
-  exit 0
-}
-
-if (-not (Test-Path $cacheRoot)) {
-  New-Item -ItemType Directory -Path $cacheRoot | Out-Null
-}
-
-if (-not (Test-Path $packageJson)) {
-  @'
+  if (-not (Test-Path $packageJson)) {
+    @'
 {
   "name": "hermes-pet-overlay-windows-cache",
   "private": true,
@@ -227,51 +280,54 @@ if (-not (Test-Path $packageJson)) {
   }
 }
 '@ | Set-Content -Path $packageJson -Encoding UTF8
-}
-
-if (-not (Test-Path $electronCmd)) {
-  $npm = (Get-Command npm.cmd -ErrorAction Stop).Source
-  & $npm install --prefix $cacheRoot --no-audit --no-fund
-  if ($LASTEXITCODE -ne 0) {
-    throw "npm install failed with exit code $LASTEXITCODE"
   }
-}
 
-Sync-HermesOverlayApp
-
-$env:HERMES_PET_PORT = [string]$Port
-$env:HERMES_PET_WS_URL = "ws://127.0.0.1:$Port"
-$env:HERMES_PET_WINDOWS_NODE_MODULES = (Join-Path $cacheRoot "node_modules")
-if ($PositionFile) {
-  $env:HERMES_PET_POSITION_FILE = $PositionFile
-}
-
-# Forward known overlay env vars from the parent (WSL) process so the
-# Electron renderer can also read them as a bootstrap hint.
-$forwardVars = @(
-  "HERMES_PET_SPECIES",
-  "HERMES_PET_DEBUG_ANIMATION",
-  "HERMES_PET_DEBUG_DRAG",
-  "HERMES_PET_DEBUG_EVENTS",
-  "HERMES_PET_OVERLAY_VERIFY_FILE",
-  "HERMES_PET_ELECTRON_USER_DATA",
-  "HERMES_PET_ALWAYS_ON_TOP_LEVEL",
-  "HERMES_PET_FOCUSABLE",
-  "HERMES_PET_SHOW_UPLOAD"
-)
-foreach ($name in $forwardVars) {
-  $val = [System.Environment]::GetEnvironmentVariable($name, "Process")
-  if ($val) {
-    Set-Item "env:$name" -Value $val
+  if (-not (Test-Path $electronCmd)) {
+    $npm = (Get-Command npm.cmd -ErrorAction Stop).Source
+    & $npm install --prefix $cacheRoot --no-audit --no-fund
+    if ($LASTEXITCODE -ne 0) {
+      throw "npm install failed with exit code $LASTEXITCODE"
+    }
   }
+
+  Sync-HermesOverlayApp
+
+  $env:HERMES_PET_PORT = [string]$Port
+  $env:HERMES_PET_WS_URL = "ws://127.0.0.1:$Port"
+  $env:HERMES_PET_WINDOWS_NODE_MODULES = (Join-Path $cacheRoot "node_modules")
+  if ($PositionFile) {
+    $env:HERMES_PET_POSITION_FILE = $PositionFile
+  }
+
+  # Forward known overlay env vars from the parent (WSL) process so the
+  # Electron renderer can also read them as a bootstrap hint.
+  $forwardVars = @(
+    "HERMES_PET_SPECIES",
+    "HERMES_PET_DEBUG_ANIMATION",
+    "HERMES_PET_DEBUG_DRAG",
+    "HERMES_PET_DEBUG_EVENTS",
+    "HERMES_PET_OVERLAY_VERIFY_FILE",
+    "HERMES_PET_ELECTRON_USER_DATA",
+    "HERMES_PET_ALWAYS_ON_TOP_LEVEL",
+    "HERMES_PET_FOCUSABLE",
+    "HERMES_PET_SHOW_UPLOAD"
+  )
+  foreach ($name in $forwardVars) {
+    $val = [System.Environment]::GetEnvironmentVariable($name, "Process")
+    if ($val) {
+      Set-Item "env:$name" -Value $val
+    }
+  }
+
+  $argsList = @("`"$mainJs`"")
+  $proc = Start-Process -FilePath $electronCmd `
+    -ArgumentList $argsList `
+    -WorkingDirectory $appRoot `
+    -PassThru
+
+  Write-Output "Hermes Windows pet overlay started (pid $($proc.Id))"
+  Write-Output "Electron cache: $cacheRoot"
+  Write-Output "Bridge URL: $env:HERMES_PET_WS_URL"
+} finally {
+  Exit-HermesOverlayLaunchLock -Mutex $launchLock
 }
-
-$argsList = @("`"$mainJs`"")
-$proc = Start-Process -FilePath $electronCmd `
-  -ArgumentList $argsList `
-  -WorkingDirectory $appRoot `
-  -PassThru
-
-Write-Output "Hermes Windows pet overlay started (pid $($proc.Id))"
-Write-Output "Electron cache: $cacheRoot"
-Write-Output "Bridge URL: $env:HERMES_PET_WS_URL"

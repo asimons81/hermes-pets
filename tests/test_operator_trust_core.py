@@ -199,6 +199,67 @@ def test_doctor_strict_fails_when_checks_warn(monkeypatch, tmp_path) -> None:
     assert cli._cmd_doctor(argparse.Namespace(strict=True)) == 1
 
 
+def test_launch_bridge_and_overlay_uses_replace_mode_with_windows_launcher(monkeypatch, tmp_path) -> None:
+    overlay_dir = tmp_path / "overlay"
+    launcher = overlay_dir / "scripts" / "launch-windows-overlay.ps1"
+    launcher.parent.mkdir(parents=True)
+    launcher.write_text("# launcher placeholder\n", encoding="utf-8")
+
+    class Bridge:
+        PET_BRIDGE_DEFAULT_PORT = 17473
+
+        @staticmethod
+        def is_bridge_available(*, port, host):
+            return True
+
+    captured_cmd: list[str] = []
+    captured_kwargs: dict[str, object] = {}
+
+    def fake_run(cmd, **kwargs):
+        nonlocal captured_cmd, captured_kwargs
+        captured_cmd = list(cmd)
+        captured_kwargs = kwargs
+        return cli.subprocess.CompletedProcess(cmd, 0, stdout="overlay ok\n", stderr="")
+
+    monkeypatch.setattr(cli.importlib, "import_module", lambda name: Bridge)
+    monkeypatch.setattr(cli, "_state_dir", lambda: tmp_path / "state")
+    monkeypatch.setattr(cli, "_overlay_dir", lambda: overlay_dir)
+    monkeypatch.setattr(cli, "_repo_root", lambda: tmp_path)
+    monkeypatch.setattr(cli, "_is_wsl", lambda: True)
+    monkeypatch.setattr(cli.shutil, "which", lambda command: "C:\\Windows\\System32\\WindowsPowerShell\\v1.0\\powershell.exe" if command == "powershell.exe" else None)
+    monkeypatch.setattr(cli, "_wsl_to_windows_path", lambda path: f"WIN:{path.name}")
+    monkeypatch.setattr(cli.subprocess, "run", fake_run)
+
+    assert cli._launch_bridge_and_overlay(argparse.Namespace(replace=True)) == 0
+    assert captured_cmd[0] == "powershell.exe"
+    assert "-Replace" in captured_cmd
+    assert captured_kwargs["cwd"] == str(tmp_path)
+
+
+def test_close_only_stops_bridge_processes_when_requested(monkeypatch, tmp_path) -> None:
+    class Bridge:
+        PET_BRIDGE_DEFAULT_PORT = 17473
+
+    launcher_calls: list[tuple[int, str]] = []
+    bridge_stop_calls: list[int] = []
+
+    def fake_run_overlay_launcher(*, port, mode):
+        launcher_calls.append((port, mode))
+        return cli.subprocess.CompletedProcess(["powershell.exe"], 0, stdout="Overlay processes: none\n", stderr="")
+
+    monkeypatch.setattr(cli.importlib, "import_module", lambda name: Bridge)
+    monkeypatch.setattr(cli, "_run_overlay_launcher", fake_run_overlay_launcher)
+    monkeypatch.setattr(cli, "_stop_bridge_processes", lambda port: bridge_stop_calls.append(port) or 2)
+
+    assert cli._cmd_close(argparse.Namespace(bridge=False)) == 0
+    assert launcher_calls == [(17473, "stop")]
+    assert bridge_stop_calls == []
+
+    assert cli._cmd_close(argparse.Namespace(bridge=True)) == 0
+    assert launcher_calls == [(17473, "stop"), (17473, "stop")]
+    assert bridge_stop_calls == [17473]
+
+
 def test_state_export_includes_redacted_local_activity(monkeypatch, tmp_path) -> None:
     monkeypatch.setattr(cli, "_state_dir", lambda: tmp_path)
     save_prefs({"quiet_mode": "important"}, tmp_path)

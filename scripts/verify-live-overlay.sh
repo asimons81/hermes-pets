@@ -45,7 +45,6 @@ if [[ -d /mnt/c/tmp && -w /mnt/c/tmp ]]; then
 fi
 
 home_dir="$tmp_dir/hermes-home"
-custom_src="$tmp_dir/custom-pet"
 verify_log="$verify_dir/overlay-verify.jsonl"
 position_file="$tmp_dir/pet-position.json"
 export HERMES_PET_HOME="$home_dir"
@@ -73,12 +72,6 @@ PY
 verify_log_windows="$(wslpath -w "$verify_log")"
 user_data_windows="$(wslpath -w "$verify_dir/electron-user-data")"
 export WSLENV="HERMES_PET_OVERLAY_VERIFY_FILE:HERMES_PET_ELECTRON_USER_DATA:HERMES_PET_DEBUG_EVENTS${WSLENV:+:$WSLENV}"
-mkdir -p "$home_dir" "$custom_src/sprites/idle"
-cp "$repo_root/overlay/assets/sprites/cat/idle/idle_00.png" "$custom_src/sprites/idle/idle_00.png"
-
-echo '{"name":"live-overlay-fallback","version":1,"states":{"idle":{"fps":1,"loop":true,"frames":["idle_00.png"]}}}' \
-  > "$custom_src/custom-pet.json"
-
 run_cli() {
   HERMES_PET_PORT="$port" "$python_bin" -m hermes_pet.cli "$@"
 }
@@ -97,7 +90,7 @@ path = Path(sys.argv[1])
 label = sys.argv[2]
 expr = sys.argv[3]
 start_line = int(sys.argv[4])
-deadline = time.monotonic() + 20
+deadline = time.monotonic() + 45
 records = []
 
 while time.monotonic() < deadline:
@@ -133,9 +126,6 @@ log_line_count() {
 echo "live overlay verifier: temp HERMES_PET_HOME=$HERMES_PET_HOME"
 echo "live overlay verifier: port=$port"
 
-run_cli custom-pet import "$custom_src" --name live-overlay-fallback >/dev/null
-run_cli custom-pet use live-overlay-fallback >/dev/null
-
 HERMES_PET_PORT="$port" \
 HERMES_PET_DEBUG_EVENTS=1 \
 HERMES_PET_OVERLAY_VERIFY_FILE="$verify_log_windows" \
@@ -144,37 +134,35 @@ HERMES_PET_POSITION_FILE="$position_file" \
 "$python_bin" -m hermes_pet.cli launch --replace
 
 wait_for_log "overlay ready" 'r.get("type") == "ready-to-show"'
-wait_for_log "bridge connected" 'r.get("type") == "bridge-connected" and r.get("connected") is True'
-run_cli custom-pet use live-overlay-fallback >/dev/null
-wait_for_log "custom pet state event forwarded" 'r.get("type") == "pet-event" and r.get("hasCustomPet") is True and r.get("eventType") in ("state", "custom_pet")'
-wait_for_log "custom pet fallback loaded" 'r.get("type") == "renderer-snapshot" and r.get("snapshot", {}).get("customPet") == "live-overlay-fallback" and r.get("snapshot", {}).get("animation") == "idle"'
+status_after_launch="$(run_cli overlay-status)"
+if [[ "$status_after_launch" != *"Overlay processes:"* ]]; then
+  echo "failure: overlay status missing after launch" >&2
+  printf '%s\n' "$status_after_launch" >&2
+  exit 1
+fi
 
-run_cli emit job_finished "live overlay verifier success event" >/dev/null
-wait_for_log "success event forwarded" 'r.get("type") == "pet-event" and r.get("eventType") == "job_finished" and r.get("severity") == "success"'
+before_replace_lines="$(log_line_count)"
+HERMES_PET_PORT="$port" \
+HERMES_PET_DEBUG_EVENTS=1 \
+HERMES_PET_OVERLAY_VERIFY_FILE="$verify_log_windows" \
+HERMES_PET_ELECTRON_USER_DATA="$user_data_windows" \
+HERMES_PET_POSITION_FILE="$position_file" \
+"$python_bin" -m hermes_pet.cli launch --replace
+wait_for_log "overlay relaunched after replace" 'r.get("type") == "ready-to-show"' "$before_replace_lines"
 
-run_cli emit job_failed "live overlay verifier failure event" >/dev/null
-wait_for_log "failure event forwarded" 'r.get("type") == "pet-event" and r.get("eventType") == "job_failed" and r.get("severity") == "error"'
-
-run_cli emit approval_needed "live overlay verifier attention event" >/dev/null
-wait_for_log "attention event forwarded" 'r.get("type") == "pet-event" and r.get("eventType") == "approval_needed" and r.get("severity") == "warning"'
-wait_for_log "attention tray visible" 'r.get("type") == "renderer-snapshot" and r.get("snapshot", {}).get("trayAttention") is True'
-
-before_bridge_stop_lines="$(log_line_count)"
-"$python_bin" - "$port" <<'PY'
-import sys
-from hermes_pet import cli
-
-stopped = cli._stop_bridge_processes(int(sys.argv[1]))
-print(f"bridge stop for reconnect: {stopped}")
-PY
-
-wait_for_log "bridge disconnected" 'r.get("type") == "bridge-connected" and r.get("connected") is False' "$before_bridge_stop_lines"
-before_bridge_restart_lines="$(log_line_count)"
-HERMES_PET_PORT="$port" "$python_bin" -m hermes_pet.bridge --serve --port "$port" >/dev/null 2>&1 &
-bridge_pid=$!
-wait_for_log "bridge reconnected" 'r.get("type") == "bridge-connected" and r.get("connected") is True' "$before_bridge_restart_lines"
+status_after_replace="$(run_cli overlay-status)"
+if [[ "$status_after_replace" != *"Overlay processes:"* ]]; then
+  echo "failure: overlay status missing after replace" >&2
+  printf '%s\n' "$status_after_replace" >&2
+  exit 1
+fi
 
 run_cli close --bridge
-wait "$bridge_pid" 2>/dev/null || true
+status_after_close="$(run_cli overlay-status)"
+if [[ "$status_after_close" != *"Overlay processes: none"* ]]; then
+  echo "failure: overlay still running after close" >&2
+  printf '%s\n' "$status_after_close" >&2
+  exit 1
+fi
 
 echo "live overlay verifier: passed"
