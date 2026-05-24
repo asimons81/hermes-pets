@@ -100,6 +100,7 @@ from hermes_pet.prefs import (
     set_quiet_mode,
 )
 from hermes_pet.update import build_update_parser, current_version, run_update
+import hermes_pet.recap_export as recap_export
 
 RARITY_ORDER = {
     "common": 0,
@@ -1940,6 +1941,21 @@ def _cmd_state(_: argparse.Namespace) -> int:
     raise PetCLIError("Use 'hermes-pet state export' or 'hermes-pet state cleanup'.")
 
 
+def _cmd_recap_export(args: argparse.Namespace) -> int:
+    since = str(getattr(args, "since", "24h") or "24h").strip()
+    output_dir = str(getattr(args, "output_dir", "") or "").strip()
+    try:
+        bundle_dir = recap_export.export_recap_bundle(since=since, output_dir=output_dir)
+    except recap_export.RecapExportError as exc:
+        raise PetCLIError(str(exc)) from exc
+    print(f"✅ Exported recap bundle to {bundle_dir}")
+    return 0
+
+
+def _cmd_recap(_: argparse.Namespace) -> int:
+    raise PetCLIError("Use 'hermes-pet recap export'.")
+
+
 def _cmd_retry(args: argparse.Namespace) -> int:
     job = latest_failed_job(base_dir=_state_dir())
     if not job:
@@ -2482,6 +2498,21 @@ def _build_parser() -> argparse.ArgumentParser:
     state_cleanup.add_argument("--dry-run", action="store_true", help="Print cleanup counts without writing.")
     state_cleanup.set_defaults(func=_cmd_state_cleanup)
     state.set_defaults(func=_cmd_state)
+
+    recap = subparsers.add_parser("recap", help="Export a local recap bundle for manual sharing.")
+    recap_sub = recap.add_subparsers(dest="recap_action")
+    recap_export = recap_sub.add_parser(
+        "export",
+        help="Write recap-card.png, caption.txt, and metadata.json into a local bundle.",
+    )
+    recap_export.add_argument("--since", default="24h", help="Look back window such as 24h, 7d, or 30m.")
+    recap_export.add_argument(
+        "--output-dir",
+        default="",
+        help="Optional output directory. Defaults to exports/recaps/<timestamp> under the state dir.",
+    )
+    recap_export.set_defaults(func=_cmd_recap_export)
+    recap.set_defaults(func=_cmd_recap)
 
     retry = subparsers.add_parser("retry", help="Rerun the latest failed wrapped command.")
     retry.add_argument(

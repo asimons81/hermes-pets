@@ -1,6 +1,6 @@
 # Hermes Pets Current State
 
-Snapshot date: 2026-05-20
+Snapshot date: 2026-05-24
 
 ## What Works
 
@@ -47,7 +47,7 @@ Snapshot date: 2026-05-20
 - Bash helpers and a smoke script are available for daily operation.
 - A temp-state smoke mode and a fresh GitHub install smoke script are available for release confidence.
 - WSL2/Windows with Windows interop is the supported full-overlay platform; native Linux, macOS, and native Windows are documented as investigation targets only.
-- v0.5.0 release candidate is prepared as the Codex custom-pet trust release: real Codex desktop pets can be discovered, imported, activated, previewed, and verified in the live WSL/Windows overlay with temp-state evidence. It still needs Tony approval before push, tag, GitHub Release, PyPI, or installer work.
+- v0.6.0 recap export release candidate is prepared as the shareability release: local recap card exports can be rendered, bundled, and validated end to end with temp-state evidence. It still needs Tony approval before push, tag, GitHub Release, PyPI, or installer work.
 
 ## Key Commands
 
@@ -161,8 +161,8 @@ hpbrief
 
 ## Next Recommended Improvements
 
-- Await Tony's explicit release approval, then push the prepared commits, create/tag `v0.5.0`, and draft the GitHub Release. Do not publish to PyPI or build an installer unless separately approved.
-- Keep PR #71 / macOS work out of the v0.5.0 release train; native platform expansion is still a later investigation target.
+- Await Tony's explicit release approval, then push the prepared commits, create/tag `v0.6.0`, and draft the GitHub Release. Do not publish to PyPI or build an installer unless separately approved.
+- Keep PR #71 / macOS work out of the v0.6.0 release train; native platform expansion is still a later investigation target.
 - Add deeper live overlay checks for drag ergonomics, always-on-top behavior, and multi-monitor/DPI setups.
 - Add richer custom pet preview controls such as playback speed and side-by-side state comparison.
 - Add an automated backup helper around `${HERMES_PET_HOME:-~/.hermes_pet}` once the manual copy/restore workflow has enough field use.

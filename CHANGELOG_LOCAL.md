@@ -10,6 +10,24 @@ This file records local implementation milestones and release-candidate notes al
 
 ## Implemented Milestones
 
+## v0.6.0 - 2026-05-24
+
+### Added
+
+- Added the local recap export flow: render a deterministic static recap card, package it into a local bundle, and expose it through a narrow CLI entry point.
+- Added `recap-card.png`, `caption.txt`, and `metadata.json` as the export bundle shape for shareable local handoff.
+- Added deterministic tests for the recap card renderer and export flow.
+
+### Fixed
+
+- Fixed the final review polish gap on the recap export card so the source window label reads cleanly and the card reads like a product artifact instead of a dashboard screenshot.
+
+### Changed
+
+- Bumped package metadata and lockfile version surfaces to `0.6.0` for the recap export release candidate.
+- Kept hosted sharing, accounts, public posting, dashboard redesign, motion-first default, platform expansion, PyPI publish, and installer work out of scope.
+
+
 ## v0.5.0 - 2026-05-20
 
 ### Added
