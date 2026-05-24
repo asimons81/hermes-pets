@@ -1,0 +1,45 @@
+# Curated Custom Pets Gallery
+
+This directory is the open-source gallery for curated custom pets shipped with Hermes Pets.
+
+## Folder tree
+
+```text
+docs/custom-pets/
+  README.md
+  release-checklist.md
+  freddy/
+    README.md
+    custom-pet.json
+    sprites/
+      idle/
+      run_left/
+      run_right/
+      running/
+      waiting/
+      failed/
+      review/
+      jumping/
+      waving/
+  jason/
+    README.md
+    custom-pet.json
+    sprites/
+      idle/
+      run_left/
+      run_right/
+      running/
+      waiting/
+      failed/
+      review/
+      jumping/
+      waving/
+```
+
+Each pet folder is a self-contained downloadable package. To add another custom pet later, copy one of the existing folders, keep the package name lowercase, update `custom-pet.json`, write a short README, and validate it before release.
+
+## Current gallery entries
+
+- Freddy
+- Jason
+- Haskell

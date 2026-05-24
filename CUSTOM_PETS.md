@@ -8,6 +8,9 @@ ${HERMES_PET_HOME:-~/.hermes_pet}/custom-pets/<pet-name>/
 
 This keeps user-generated pets separate from tracked built-in assets.
 
+Curated gallery entries that ship with the repo live under `docs/custom-pets/`.
+Use `docs/custom-pets/README.md` for the folder tree and `docs/custom-pets/release-checklist.md` for the release workflow.
+
 Community contribution rules live in `docs/custom-pet-contributions.md`. Phase 5
 supports curated issue/PR submissions only; it does not add a hosted gallery or
 remote upload flow.

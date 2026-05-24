@@ -10,6 +10,19 @@ This file records local implementation milestones and release-candidate notes al
 
 ## Implemented Milestones
 
+## v0.6.1 - 2026-05-24
+
+### Added
+
+- Added the curated custom pet gallery under `docs/custom-pets/` with Freddy and Jason as repository-backed downloadable packages.
+- Added per-pet READMEs, a gallery index, and a release checklist so future custom pets can be added without inventing a new workflow.
+- Added a public release note for the gallery release.
+
+### Changed
+
+- Bumped package metadata from `0.6.0` to `0.6.1` for the gallery release.
+- Kept the release focused on the gallery and documentation, not a hosted downloader or in-app gallery backend.
+
 ## v0.6.0 - 2026-05-24
 
 ### Added
