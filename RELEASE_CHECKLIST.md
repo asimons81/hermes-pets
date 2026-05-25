@@ -1,6 +1,6 @@
 # Hermes Pets Release Checklist
 
-Use this for release prep and verification. Do not push, tag, or publish from this checklist unless the release task explicitly asks for it.
+Use this for release prep and verification. For orientation, see `docs/README.md`. Do not push, tag, or publish from this checklist unless the release task explicitly asks for it.
 
 ## Repository
 

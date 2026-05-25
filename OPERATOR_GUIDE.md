@@ -1,6 +1,6 @@
 # Hermes Pets Operator Guide
 
-This is the short version for daily use.
+This is the short version for daily use. For the full docs map, see `docs/README.md`.
 
 ## Startup
 

@@ -2,6 +2,8 @@
 
 Snapshot date: 2026-05-24
 
+This file is the living snapshot of what works right now. For orientation, see `docs/README.md`. Historical release notes live in `docs/releases/` and `release-readiness/`.
+
 ## What Works
 
 - Python CLI is installable as `hermes-pet` and `hermes-pet-bridge`.
