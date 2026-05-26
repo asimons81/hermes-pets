@@ -125,6 +125,11 @@ function setView(name) {
     button.classList.toggle('active', active);
     if (active) {
       button.setAttribute('aria-current', 'page');
+      const indicator = $('nav-indicator');
+      if (indicator) {
+        indicator.style.transform = `translateY(${button.offsetTop}px)`;
+        indicator.style.height = `${button.offsetHeight}px`;
+      }
     } else {
       button.removeAttribute('aria-current');
     }
@@ -649,6 +654,14 @@ async function saveVoice() {
 }
 
 document.querySelectorAll('.nav-item').forEach((button) => button.addEventListener('click', () => setView(button.dataset.view)));
+window.addEventListener('resize', () => {
+  const activeBtn = document.querySelector('.nav-item.active');
+  const indicator = $('nav-indicator');
+  if (activeBtn && indicator) {
+    indicator.style.transform = `translateY(${activeBtn.offsetTop}px)`;
+    indicator.style.height = `${activeBtn.offsetHeight}px`;
+  }
+});
 $('refreshBtn').addEventListener('click', refresh);
 $('savePrefsBtn').addEventListener('click', savePrefs);
 $('saveVoiceBtn').addEventListener('click', saveVoice);

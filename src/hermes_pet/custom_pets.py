@@ -273,8 +273,11 @@ def _windows_user_codex_pet_dirs() -> list[Path]:
         if not user_dir.is_dir() or user_dir.name.lower() in {"public", "default", "default user", "all users"}:
             continue
         pets_dir = user_dir / CODEX_APP_PETS_ROOT
-        if pets_dir.is_dir():
-            dirs.append(pets_dir)
+        try:
+            if pets_dir.is_dir():
+                dirs.append(pets_dir)
+        except OSError:
+            pass
     return dirs
 
 

@@ -7,6 +7,23 @@
   <link rel="stylesheet" href="app.css">
 </head>
 <body>
+  <div id="intro" class="intro" aria-hidden="true">
+    <div class="intro-scene">
+      <div class="intro-halo"></div>
+      <div class="intro-logo">HP</div>
+    </div>
+    <div class="intro-copy">
+      <p>Hermes Companion System</p>
+      <strong>Hermes Pets</strong>
+      <span>Desktop companion layer console</span>
+      <div class="intro-terminal">
+        <div class="terminal-line">[INIT] STABILIZING WEBSOCKET LOOPBACK... <span class="status-ok">OK</span></div>
+        <div class="terminal-line">[LOAD] HATCHING LOCAL COMPANION DESKTOP SYSTEM... <span class="status-ok">OK</span></div>
+        <div class="terminal-line">[READY] OPERATOR LINK ESTABLISHED. <span class="status-success">SUCCESS</span></div>
+      </div>
+    </div>
+  </div>
+
   <div class="shell">
     <aside class="rail" aria-label="Hermes Pets console">
       <div class="mark" aria-label="Hermes Pets local operator console">
@@ -23,6 +40,7 @@
       </div>
 
       <nav class="nav-stack" aria-label="Dashboard views">
+        <div class="nav-indicator" id="nav-indicator"></div>
         <button class="nav-item active" data-view="overview" type="button" aria-current="page">Overview</button>
         <button class="nav-item" data-view="change" type="button">Change Pet</button>
         <button class="nav-item" data-view="custom" type="button">Custom Pets</button>
