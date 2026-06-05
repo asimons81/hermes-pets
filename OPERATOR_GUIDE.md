@@ -31,10 +31,13 @@ dependencies in `%LOCALAPPDATA%\HermesAgent\pet-overlay-electron` and opens the
 floating Windows overlay against `ws://127.0.0.1:17473` unless the port or URL is
 overridden.
 
-The full overlay path is supported on WSL2/Windows only. Native Linux, macOS,
-and native Windows remain investigation targets until their launcher, process
-control, and live verification paths are proven. See
-`docs/platform-support.md` before describing a platform as supported.
+The stable full overlay path is supported on WSL2/Windows. Native Windows is an
+unsigned beta installer path: use the Start Menu `Hermes Pets.exe` shortcut or
+`<install-dir>\bin\hermes-pet.exe` from PowerShell/cmd after installing the
+desktop artifact. Native Linux and macOS remain investigation targets until
+their launcher, process control, and live verification paths are proven. See
+`docs/platform-support.md` and `docs/native-windows-installer.md` before
+describing a platform as supported.
 
 For reliable launch checks, keep `/mnt/c/Windows/System32/WindowsPowerShell/v1.0`
 and `/mnt/c/Windows/system32` on the WSL `PATH`. If `doctor`, `overlay-status`,

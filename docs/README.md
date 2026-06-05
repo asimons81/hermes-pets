@@ -10,6 +10,7 @@ This is the orientation page for the repo docs. If a doc is not listed here, it 
 ## Operational docs
 
 - [`OPERATOR_GUIDE.md`](../OPERATOR_GUIDE.md), short daily-use guide for launch, overlay status, and basic recovery
+- [`docs/native-windows-installer.md`](native-windows-installer.md), unsigned beta Windows installer build and verification workflow
 - [`CUSTOM_PETS.md`](../CUSTOM_PETS.md), custom pet package format and CLI docs
 - [`docs/custom-pets/README.md`](custom-pets/README.md), curated custom pet gallery and package index
 - [`RELEASE_CHECKLIST.md`](../RELEASE_CHECKLIST.md), release prep and verification checklist

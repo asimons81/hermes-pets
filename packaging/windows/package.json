@@ -1,0 +1,64 @@
+{
+  "name": "hermes-pets-windows",
+  "version": "0.7.0",
+  "description": "Hermes Pets native Windows desktop installer",
+  "main": "main.js",
+  "private": true,
+  "scripts": {
+    "dist": "electron-builder --win nsis --x64"
+  },
+  "dependencies": {
+    "ws": "8.21.0"
+  },
+  "devDependencies": {
+    "electron": "42.3.3",
+    "electron-builder": "25.1.8"
+  },
+  "build": {
+    "appId": "dev.hermespets.desktop",
+    "productName": "Hermes Pets",
+    "asar": false,
+    "directories": {
+      "output": "../../dist/windows-installer"
+    },
+    "files": [
+      "main.js",
+      "package.json"
+    ],
+    "extraResources": [
+      {
+        "from": "staging/overlay",
+        "to": "overlay"
+      },
+      {
+        "from": "staging/bin",
+        "to": "bin"
+      }
+    ],
+    "extraFiles": [
+      {
+        "from": "staging/bin/hermes-pet.exe",
+        "to": "bin/hermes-pet.exe"
+      },
+      {
+        "from": "staging/bin/hermes-pet-bridge.exe",
+        "to": "bin/hermes-pet-bridge.exe"
+      }
+    ],
+    "win": {
+      "target": [
+        "nsis"
+      ],
+      "signAndEditExecutable": false
+    },
+    "nsis": {
+      "oneClick": false,
+      "perMachine": false,
+      "allowToChangeInstallationDirectory": true,
+      "createDesktopShortcut": true,
+      "createStartMenuShortcut": true,
+      "shortcutName": "Hermes Pets"
+    },
+    "artifactName": "Hermes-Pets-Setup-${version}.${ext}"
+  }
+}

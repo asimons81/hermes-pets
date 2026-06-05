@@ -8,7 +8,7 @@
     "start": "electron ."
   },
   "dependencies": {
-    "electron": "^33.0.0",
-    "ws": "^8.18.0"
+    "electron": "^42.3.3",
+    "ws": "^8.21.0"
   }
 }

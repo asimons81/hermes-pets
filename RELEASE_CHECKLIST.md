@@ -107,6 +107,40 @@ scripts/verify-live-overlay.sh
   the next-version recommendation.
 - Do not bump `pyproject.toml` during Phase 5 by default.
 
+## v0.7.0 Native Windows Installer Closeout
+
+- Confirm `pyproject.toml`, `uv.lock`, `packaging/windows/package.json`, and
+  `packaging/windows/package-lock.json` agree on `0.7.0`.
+- Confirm `docs/platform-support.md`, `docs/native-windows-installer.md`,
+  `CURRENT_STATE.md`, `README.md`, and `OPERATOR_GUIDE.md` describe native
+  Windows as an unsigned beta installer path, not a signed/general installer.
+- Run:
+
+```bash
+uv run --extra dev pytest -q
+uv run --with setuptools --with wheel python scripts/verify-package-artifacts.py
+node --check overlay/src/renderer.js
+node --check overlay/src/main.js
+node --check overlay/src/main.windows.js
+node --check overlay/src/preload.js
+node --check src/hermes_pet/overlay/src/main.windows.js
+node --check packaging/windows/main.js
+```
+
+- Run from native Windows PowerShell:
+
+```powershell
+scripts\verify-native-windows-overlay.ps1
+npm audit --omit=dev --prefix overlay
+npm audit --omit=dev --prefix packaging\windows
+packaging\windows\build-installer.ps1
+```
+
+- Rehearse silent install, live launch, `overlay-status`, `close --bridge`,
+  reinstall state preservation, and uninstall against the generated installer.
+- Publish the unsigned installer with its `.sha256` checksum. Do not claim code
+  signing or auto-update support.
+
 ## v0.5.0 Codex Custom-Pet Trust Closeout
 
 - Confirm `pyproject.toml`, `uv.lock`, source-checkout CLI version, and release notes agree on `0.5.0`.

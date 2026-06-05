@@ -1,8 +1,8 @@
 # Hermes Pets Packaging and Installer Decision Notes
 
-Phase 5 improves packaging evidence without publishing a PyPI release or
-building a desktop installer. GitHub install remains the supported public install
-path until a later milestone proves broader distribution.
+Hermes Pets supports GitHub-based WSL/Windows installs and now includes an
+unsigned beta native Windows desktop installer path. PyPI publishing and signed
+installer distribution remain future packaging decisions.
 
 ## Current Supported Path
 
@@ -41,19 +41,19 @@ Artifact checks:
 | `pipx install git+https://...` | Isolates CLI dependencies; natural for command-line tools | Needs the same GitHub target; overlay still depends on WSL/Windows launch requirements | Good candidate for documented operator install once rehearsed |
 | `uv tool install git+https://...` | Fast isolated CLI install; good for local developer workflows | Requires `uv`; should be rehearsed against GitHub refs and packaged overlay assets | Good candidate for documented developer/operator install once rehearsed |
 | PyPI package | Familiar `pip install hermes-pet`; easier dependency resolution and repeatable version pins | Requires publishing process, project ownership, release signing/checks, and long-description verification | Prepare metadata now; do not publish in Phase 5 |
-| Windows desktop installer | Friendliest full-overlay onboarding for the supported platform | Requires packaging Electron, update/uninstall story, signing decision, and Windows-native QA | Future platform bet after GitHub and PyPI evidence |
+| Windows desktop installer | Friendliest full-overlay onboarding for the supported platform | Unsigned beta triggers SmartScreen until signing is added; requires Windows-native QA evidence per artifact | Supported unsigned beta path |
 | Native Linux/macOS installer | Could expand desktop audience | Native overlay launch and verification are unproven | Do not pursue before platform support is proven |
 
 ## Recommendation
 
-The next formal packaging milestone should be "Phase 6: Public packaging and
-installer proof." It should:
+The next formal packaging milestone should harden public distribution. It should:
 
-- Tag a release candidate from a clean GitHub install rehearsal.
+- Tag a release candidate from a clean GitHub install rehearsal and a native
+  Windows installer rehearsal.
 - Rehearse `pipx` and `uv tool` installs from the GitHub tag.
 - Run `python3 scripts/verify-package-artifacts.py` and check README rendering
   before any PyPI upload.
-- Decide whether PyPI is enough for the next public release or whether a Windows
-  desktop installer should be treated as a separate follow-up.
+- Decide whether PyPI and Authenticode signing are required for a public
+  non-beta installer.
 - Keep Linux/macOS installers out of scope until native overlay support is
   proven.

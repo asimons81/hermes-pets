@@ -25,6 +25,10 @@ Install from GitHub:
 pip install 'git+https://github.com/asimons81/hermes-pets.git'
 ```
 
+Or install the unsigned beta native Windows desktop artifact from the release
+assets and launch `Hermes Pets.exe`; the bundled CLI is available under the
+installed `bin\hermes-pet.exe`.
+
 Or, for local development:
 
 ```bash
@@ -41,7 +45,9 @@ hermes-pet doctor
 hermes-pet dashboard --no-open
 ```
 
-On WSL and Windows, run the CLI from WSL. `hermes-pet launch` starts the Python bridge in WSL and opens the Electron overlay through the Windows launcher.
+On WSL/Windows, run the GitHub-installed CLI from WSL. `hermes-pet launch`
+starts the Python bridge in WSL and opens the Electron overlay through the
+Windows launcher. On native Windows, use the unsigned beta desktop installer.
 
 ## Core commands
 
@@ -73,9 +79,16 @@ hermes-pet dashboard --no-open
 
 ## Platform support
 
-WSL2 on Windows 10/11 with Windows interop is the supported platform for the full CLI, bridge, and floating Electron overlay experience. Native Linux, macOS, and native Windows are investigation targets only in Phase 5, so do not treat CLI-only behavior on those platforms as full overlay support.
+WSL2 on Windows 10/11 with Windows interop is the stable supported platform for
+the full CLI, bridge, and floating Electron overlay experience. Native Windows
+is supported as an unsigned beta desktop installer path after the installer
+artifact and manual live QA checklist pass. Native Linux and macOS remain
+investigation targets, so do not treat CLI-only behavior on those platforms as
+full overlay support.
 
-See [`docs/platform-support.md`](docs/platform-support.md) for the supported platform matrix and known blockers.
+See [`docs/platform-support.md`](docs/platform-support.md) and
+[`docs/native-windows-installer.md`](docs/native-windows-installer.md) for the
+supported platform matrix, installer workflow, and known blockers.
 
 ## Updating Hermes Pets
 

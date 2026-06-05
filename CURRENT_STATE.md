@@ -1,6 +1,6 @@
 # Hermes Pets Current State
 
-Snapshot date: 2026-05-24
+Snapshot date: 2026-06-05
 
 This file is the living snapshot of what works right now. For orientation, see `docs/README.md`. Historical release notes live in `docs/releases/` and `release-readiness/`.
 
@@ -11,6 +11,7 @@ This file is the living snapshot of what works right now. For orientation, see `
 - `hermes-pet launch` starts the bridge and launches the Electron overlay.
 - `hermes-pet launch --replace` stops existing Windows overlay process trees before starting a fresh overlay.
 - On WSL/Windows, the launcher mirrors the overlay app into `%LOCALAPPDATA%\HermesAgent\pet-overlay-electron\app-<port>` so Electron reads renderer files from a native Windows path rather than a WSL UNC path.
+- Native Windows has an unsigned beta desktop installer that bundles `Hermes Pets.exe`, `bin/hermes-pet.exe`, `bin/hermes-pet-bridge.exe`, the Electron overlay, and runtime dependencies without requiring WSL, system Python, or npm after install.
 - Overlay movement, saved position, visible sprite bounds, and reconnect behavior are in place.
 - Ambient events can be emitted with `hermes-pet emit`.
 - Local commands can be wrapped with `wrap` or `run`.
@@ -48,7 +49,7 @@ This file is the living snapshot of what works right now. For orientation, see `
 - `hermes-pet doctor --strict` returns non-zero when any doctor check warns.
 - Bash helpers and a smoke script are available for daily operation.
 - A temp-state smoke mode and a fresh GitHub install smoke script are available for release confidence.
-- WSL2/Windows with Windows interop is the supported full-overlay platform; native Linux, macOS, and native Windows are documented as investigation targets only.
+- WSL2/Windows with Windows interop is the stable supported full-overlay platform. Native Windows is supported as an unsigned beta desktop installer path after artifact QA. Native Linux and macOS remain investigation targets only.
 - v0.6.0 recap export shipped as the shareability release: local recap card exports can be rendered, bundled, and validated end to end with temp-state evidence. The default bundle lands under `exports/recaps/<timestamp>` in the state dir and includes `recap-card.png`, `caption.txt`, and `metadata.json`.
 
 ## Key Commands
@@ -134,11 +135,13 @@ hpbrief
 - `overlay/src/renderer.js`: sprite rendering and event reactions.
 - `overlay/src/preload.js`: safe renderer API exposure.
 - `overlay/scripts/launch-windows-overlay.ps1`: Windows single-instance launcher.
+- `packaging/windows/`: native Windows installer wrapper, PyInstaller/electron-builder metadata, and build script.
 - `shell-helpers/hermes-pet.bash`: Bash aliases/functions.
 - `scripts/smoke-hermes-pet.sh`: smoke verification script.
 - `scripts/smoke-renderer.js`: dependency-free renderer behavior smoke check.
 - `scripts/smoke-github-install.sh`: fresh virtualenv install smoke for the public GitHub install path.
 - `scripts/verify-live-overlay.sh`: WSL/Windows live Electron overlay verifier with bounded retry for transient Electron startup/teardown races.
+- `scripts/verify-native-windows-overlay.ps1`: native Windows installer layout and launcher verifier.
 - `scripts/validate-custom-pet.py`: custom pet package validator.
 - `scripts/package-custom-pet.py`: custom pet package helper for hatch runs and built-in fixtures.
 - `.codex/skills/hermes-pet-hatch/SKILL.md`: Hermes-specific custom pet creation workflow.
@@ -151,7 +154,7 @@ hpbrief
 
 ## Known Limitations
 
-- The full overlay path is supported on WSL2/Windows with Windows interop. Native Linux, macOS, and native Windows are not supported full-overlay platforms in Phase 5.
+- The stable full overlay path is supported on WSL2/Windows with Windows interop. Native Windows is supported as an unsigned beta installer path; SmartScreen warnings are expected until Authenticode signing is added. Native Linux and macOS are not supported full-overlay platforms yet.
 - Editable installs use the repo-local `overlay/` as source; WSL/Windows launch mirrors the active overlay source into the Windows Electron cache before launch. Non-editable installs use packaged overlay assets cached under `~/.hermes_pet/cache/overlay` first.
 - The bridge must be reachable for live overlay events; local event/job history still records when the bridge is unavailable.
 - Custom pet `idle` is required; missing optional states rely on renderer fallback behavior.
@@ -167,7 +170,7 @@ hpbrief
 
 ## Next Recommended Improvements
 
-- v0.6.0 recap export shipped as the shareability release; PyPI and installer publishing stayed out of scope.
+- v0.7.0 ships the unsigned beta native Windows installer path; PyPI publishing, installer signing, and auto-update remain out of scope.
 - Keep PR #71 / macOS work out of the v0.6.0 release train; native platform expansion remains a later investigation target.
 - Add deeper live overlay checks for drag ergonomics, always-on-top behavior, and multi-monitor/DPI setups.
 - Add richer custom pet preview controls such as playback speed and side-by-side state comparison.

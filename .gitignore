@@ -23,6 +23,7 @@ ENV/
 # Node/Electron dependencies and logs
 node_modules/
 overlay/node_modules/
+packaging/windows/staging/
 npm-debug.log*
 yarn-debug.log*
 yarn-error.log*

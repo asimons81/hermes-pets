@@ -49,6 +49,7 @@ jobs:
             overlay/src/main.js
             overlay/src/main.windows.js
             overlay/src/preload.js
+            packaging/windows/main.js
             src/hermes_pet/dashboard/app.js
             src/hermes_pet/overlay/src/main.windows.js
           )
@@ -108,7 +109,9 @@ jobs:
           $ErrorActionPreference = 'Stop'
           $paths = @(
             'overlay/scripts/launch-windows-overlay.ps1',
-            'src/hermes_pet/overlay/scripts/launch-windows-overlay.ps1'
+            'src/hermes_pet/overlay/scripts/launch-windows-overlay.ps1',
+            'scripts/verify-native-windows-overlay.ps1',
+            'packaging/windows/build-installer.ps1'
           )
           foreach ($path in $paths) {
             if (-not (Test-Path -LiteralPath $path)) {
@@ -126,3 +129,46 @@ jobs:
               throw ($errors | Out-String)
             }
           }
+
+  windows-installer:
+    name: Native Windows installer artifact
+    runs-on: windows-latest
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v5
+
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Sync locked Python environment
+        run: uv sync --locked --extra dev
+
+      - name: Run native Windows unit coverage
+        run: uv run pytest tests/test_operator_trust_core.py -q
+
+      - name: Verify native Windows packaging scripts
+        shell: powershell
+        run: scripts\verify-native-windows-overlay.ps1
+
+      - name: Build unsigned native Windows installer
+        shell: powershell
+        run: packaging\windows\build-installer.ps1
+
+      - name: Upload unsigned installer artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: hermes-pets-windows-installer
+          path: |
+            dist/windows-installer/Hermes-Pets-Setup-*.exe
+            dist/windows-installer/Hermes-Pets-Setup-*.exe.sha256

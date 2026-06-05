@@ -10,6 +10,20 @@ This file records local implementation milestones and release-candidate notes al
 
 ## Implemented Milestones
 
+## v0.7.0 - 2026-06-05
+
+### Added
+
+- Added an unsigned beta native Windows desktop installer path that bundles the Electron overlay, `hermes-pet.exe`, and `hermes-pet-bridge.exe`.
+- Added native Windows installer build, verification, CI artifact, and release documentation.
+- Added installed-mode launcher support so native Windows `launch`, `overlay-status`, `close`, `close --bridge`, and `doctor` work against the bundled app.
+
+### Changed
+
+- Bumped package metadata from `0.6.2` to `0.7.0` for the native Windows installer release.
+- Upgraded overlay runtime dependencies to Electron `42.3.3` and `ws` `8.21.0`.
+- Documented native Windows as an unsigned beta path while keeping WSL2/Windows as the stable full-overlay path.
+
 ## v0.6.2 - 2026-06-04
 
 ### Added

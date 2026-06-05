@@ -236,6 +236,91 @@ def test_launch_bridge_and_overlay_uses_replace_mode_with_windows_launcher(monke
     assert captured_kwargs["cwd"] == str(tmp_path)
 
 
+def test_native_windows_launch_uses_installed_launcher_mode(monkeypatch, tmp_path) -> None:
+    overlay_dir = tmp_path / "resources" / "overlay"
+    launcher = overlay_dir / "scripts" / "launch-windows-overlay.ps1"
+    launcher.parent.mkdir(parents=True)
+    launcher.write_text("# launcher placeholder\n", encoding="utf-8")
+
+    bridge_exe = tmp_path / "bin" / "hermes-pet-bridge.exe"
+    bridge_exe.parent.mkdir()
+    bridge_exe.write_text("placeholder\n", encoding="utf-8")
+
+    class Bridge:
+        PET_BRIDGE_DEFAULT_PORT = 17473
+
+        @staticmethod
+        def is_bridge_available(*, port, host):
+            return True
+
+    captured_cmd: list[str] = []
+
+    def fake_run(cmd, **kwargs):
+        nonlocal captured_cmd
+        captured_cmd = list(cmd)
+        return cli.subprocess.CompletedProcess(cmd, 0, stdout="overlay ok\n", stderr="")
+
+    monkeypatch.setattr(cli.importlib, "import_module", lambda name: Bridge)
+    monkeypatch.setattr(cli.sys, "platform", "win32")
+    monkeypatch.setattr(cli, "_is_wsl", lambda: False)
+    monkeypatch.setattr(cli, "_state_dir", lambda: tmp_path / "state")
+    monkeypatch.setattr(cli, "_overlay_dir", lambda: overlay_dir)
+    monkeypatch.setattr(cli, "_repo_root", lambda: tmp_path)
+    monkeypatch.setattr(cli, "_bundled_bridge_executable", lambda: bridge_exe)
+    monkeypatch.setattr(cli.shutil, "which", lambda command: "powershell.exe" if command == "powershell.exe" else None)
+    monkeypatch.setattr(cli.subprocess, "run", fake_run)
+
+    assert cli._launch_bridge_and_overlay(argparse.Namespace(replace=True)) == 0
+    assert "-Installed" in captured_cmd
+    assert "-Replace" in captured_cmd
+
+
+def test_start_bridge_process_uses_bundled_bridge_exe(monkeypatch, tmp_path) -> None:
+    bridge_exe = tmp_path / "bin" / "hermes-pet-bridge.exe"
+    bridge_exe.parent.mkdir()
+    bridge_exe.write_text("placeholder\n", encoding="utf-8")
+    captured_cmd: list[str] = []
+
+    class FakePopen:
+        def __init__(self, cmd, **kwargs):
+            nonlocal captured_cmd
+            captured_cmd = list(cmd)
+
+    monkeypatch.setattr(cli, "_bundled_bridge_executable", lambda: bridge_exe)
+    monkeypatch.setattr(cli, "_repo_root", lambda: tmp_path)
+    monkeypatch.setattr(cli.subprocess, "Popen", FakePopen)
+
+    cli._start_bridge_process(17473)
+
+    assert captured_cmd == [str(bridge_exe), "--serve", "--port", "17473"]
+
+
+def test_run_overlay_launcher_native_windows_adds_installed(monkeypatch, tmp_path) -> None:
+    overlay_dir = tmp_path / "resources" / "overlay"
+    launcher = overlay_dir / "scripts" / "launch-windows-overlay.ps1"
+    launcher.parent.mkdir(parents=True)
+    launcher.write_text("# launcher placeholder\n", encoding="utf-8")
+    captured_cmd: list[str] = []
+
+    def fake_run(cmd, **kwargs):
+        nonlocal captured_cmd
+        captured_cmd = list(cmd)
+        return cli.subprocess.CompletedProcess(cmd, 0, stdout="Overlay processes: none\n", stderr="")
+
+    monkeypatch.setattr(cli.sys, "platform", "win32")
+    monkeypatch.setattr(cli, "_is_wsl", lambda: False)
+    monkeypatch.setattr(cli, "_overlay_dir", lambda: overlay_dir)
+    monkeypatch.setattr(cli, "_repo_root", lambda: tmp_path)
+    monkeypatch.setattr(cli.shutil, "which", lambda command: "powershell.exe" if command == "powershell.exe" else None)
+    monkeypatch.setattr(cli.subprocess, "run", fake_run)
+
+    result = cli._run_overlay_launcher(port=17473, mode="status")
+
+    assert result.returncode == 0
+    assert "-Installed" in captured_cmd
+    assert "-Status" in captured_cmd
+
+
 def test_close_only_stops_bridge_processes_when_requested(monkeypatch, tmp_path) -> None:
     class Bridge:
         PET_BRIDGE_DEFAULT_PORT = 17473

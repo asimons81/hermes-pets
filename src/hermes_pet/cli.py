@@ -115,6 +115,18 @@ class PetCLIError(RuntimeError):
     """User-facing CLI error."""
 
 
+def _configure_stdio() -> None:
+    for stream_name in ("stdout", "stderr"):
+        stream = getattr(sys, stream_name, None)
+        reconfigure = getattr(stream, "reconfigure", None)
+        if not reconfigure:
+            continue
+        try:
+            reconfigure(errors="replace")
+        except Exception:
+            pass
+
+
 def _state_dir() -> Path:
     return Path(os.environ.get("HERMES_PET_HOME") or "~/.hermes_pet").expanduser()
 
@@ -141,6 +153,45 @@ def _repo_root() -> Path:
 
 def _source_overlay_dir() -> Path:
     return _repo_root() / "overlay"
+
+
+def _installed_overlay_dir() -> Path | None:
+    configured = os.environ.get("HERMES_PET_INSTALLED_OVERLAY_DIR")
+    if configured:
+        return Path(configured).expanduser()
+
+    executable = Path(sys.executable).resolve()
+    candidates = [
+        executable.parent / "overlay",
+        executable.parent.parent / "overlay",
+        executable.parent.parent / "resources" / "overlay",
+    ]
+    for candidate in candidates:
+        if _is_overlay_runtime_dir(candidate):
+            return candidate
+    return None
+
+
+def _bundled_bridge_executable() -> Path | None:
+    configured = os.environ.get("HERMES_PET_BRIDGE_EXE")
+    if configured:
+        return Path(configured).expanduser()
+
+    if not getattr(sys, "frozen", False):
+        return None
+
+    exe_name = "hermes-pet-bridge.exe" if os.name == "nt" else "hermes-pet-bridge"
+    executable = Path(sys.executable).resolve()
+    candidates = [
+        executable.parent / exe_name,
+        executable.parent.parent / exe_name,
+        executable.parent.parent / "bin" / exe_name,
+        executable.parent / "bin" / exe_name,
+    ]
+    for candidate in candidates:
+        if candidate.is_file():
+            return candidate
+    return None
 
 
 def _overlay_required_files() -> tuple[str, ...]:
@@ -199,6 +250,10 @@ def _ensure_cached_packaged_overlay() -> Path:
 
 
 def _overlay_dir() -> Path:
+    installed_overlay = _installed_overlay_dir()
+    if installed_overlay is not None:
+        return installed_overlay
+
     source_overlay = _source_overlay_dir()
     if not os.environ.get("HERMES_PET_FORCE_PACKAGED_OVERLAY") and _is_overlay_runtime_dir(source_overlay):
         return source_overlay
@@ -406,7 +461,11 @@ def _start_bridge_process(port: int) -> subprocess.Popen[bytes]:
     env = os.environ.copy()
     env["HERMES_PET_PORT"] = str(port)
     env.setdefault("HERMES_PET_HOST", "127.0.0.1")
-    cmd = [sys.executable, "-m", "hermes_pet.bridge", "--serve", "--port", str(port)]
+    bridge_exe = _bundled_bridge_executable()
+    if bridge_exe is not None:
+        cmd = [str(bridge_exe), "--serve", "--port", str(port)]
+    else:
+        cmd = [sys.executable, "-m", "hermes_pet.bridge", "--serve", "--port", str(port)]
     return subprocess.Popen(cmd, cwd=str(_repo_root()), env=env, **_detached_popen_kwargs())
 
 
@@ -451,6 +510,9 @@ def _launch_bridge_and_overlay(args: argparse.Namespace) -> int:
     env["HERMES_PET_PORT"] = str(port)
     env["HERMES_PET_WS_URL"] = f"ws://{host}:{port}"
     env["HERMES_PET_POSITION_FILE"] = str(position_file)
+    bridge_exe = _bundled_bridge_executable()
+    if bridge_exe is not None:
+        env["HERMES_PET_BRIDGE_EXE"] = str(bridge_exe)
 
     if _is_wsl() or sys.platform == "win32":
         script = overlay_dir / "scripts" / "launch-windows-overlay.ps1"
@@ -478,6 +540,8 @@ def _launch_bridge_and_overlay(args: argparse.Namespace) -> int:
                     "-PositionFile",
                     _wsl_to_windows_path(position_file),
                 ]
+                if sys.platform == "win32" and not _is_wsl():
+                    cmd.append("-Installed")
                 if getattr(args, "replace", False):
                     cmd.append("-Replace")
                 try:
@@ -556,6 +620,8 @@ def _run_overlay_launcher(*, port: int, mode: str) -> subprocess.CompletedProces
         "-Port",
         str(port),
     ]
+    if sys.platform == "win32" and not _is_wsl():
+        cmd.append("-Installed")
     if mode == "status":
         cmd.append("-Status")
     elif mode == "stop":
@@ -597,7 +663,33 @@ def _cmd_overlay_status(_: argparse.Namespace) -> int:
 
 def _bridge_process_ids(port: int) -> list[int]:
     if os.name == "nt":
-        return []
+        query = (
+            "Get-CimInstance Win32_Process | "
+            "Where-Object { $_.CommandLine -and $_.CommandLine -match 'hermes-pet-bridge' -and "
+            f"$_.CommandLine -match '(^|\\s)--port(=|\\s){port}(\\s|$)' }} | "
+            "ForEach-Object { $_.ProcessId }"
+        )
+        launcher = _powershell_launcher()
+        if not launcher:
+            return []
+        try:
+            result = subprocess.run(
+                [launcher, "-NoLogo", "-NoProfile", "-Command", query],
+                capture_output=True,
+                text=True,
+                timeout=10,
+            )
+        except Exception:
+            return []
+        pids: list[int] = []
+        for line in result.stdout.splitlines():
+            try:
+                pid = int(line.strip())
+            except ValueError:
+                continue
+            if pid != os.getpid():
+                pids.append(pid)
+        return pids
 
     try:
         result = subprocess.run(["ps", "-eo", "pid=,args="], check=True, capture_output=True, text=True)
@@ -759,6 +851,8 @@ def _cmd_doctor(args: argparse.Namespace) -> int:
                 str(port),
                 "-Status",
             ]
+            if sys.platform == "win32" and not _is_wsl():
+                status_cmd.append("-Installed")
             try:
                 status_result = subprocess.run(status_cmd, cwd=str(_repo_root()), capture_output=True, text=True, timeout=10)
             except Exception as exc:
@@ -2552,6 +2646,7 @@ def _build_parser() -> argparse.ArgumentParser:
 
 
 def main(argv: list[str] | None = None) -> int:
+    _configure_stdio()
     parser = _build_parser()
     raw_argv = list(sys.argv[1:] if argv is None else argv)
     args = parser.parse_args(raw_argv)

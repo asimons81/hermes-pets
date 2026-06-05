@@ -416,7 +416,7 @@ def test_cli_update_entrypoint_wires_parser_flags(monkeypatch: pytest.MonkeyPatc
 
 def test_stale_editable_metadata_prefers_pyproject_source_truth(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
     """If the installed distribution metadata is stale (e.g. 0.1.0) but the
-    checkout pyproject.toml is newer (e.g. 0.6.2), current_version() must
+    checkout pyproject.toml is newer (e.g. 0.7.0), current_version() must
     return the source truth, not the stale metadata."""
     repo = tmp_path / "repo"
     package_dir = _write_project_files(repo)
@@ -427,7 +427,7 @@ def test_stale_editable_metadata_prefers_pyproject_source_truth(tmp_path: Path, 
     monkeypatch.setattr(update.metadata, "version", stale_metadata_version)
 
     version = update.current_version(package_dir)
-    assert version == "0.6.2", f"expected source truth 0.6.2, got stale metadata {version}"
+    assert version == "0.7.0", f"expected source truth 0.7.0, got stale metadata {version}"
 
 
 def test_current_version_falls_back_to_metadata_when_no_pyproject(

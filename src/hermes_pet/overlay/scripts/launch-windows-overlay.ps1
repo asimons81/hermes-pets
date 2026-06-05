@@ -10,7 +10,11 @@ param(
 
   [switch]$Status,
 
-  [switch]$Stop
+  [switch]$Stop,
+
+  [switch]$Installed,
+
+  [string]$AppExe
 )
 
 $ErrorActionPreference = "Stop"
@@ -24,6 +28,31 @@ $mainJs = Join-Path $appRoot "src\main.windows.js"
 
 if (-not (Test-Path $sourceMainJs)) {
   throw "Windows overlay entrypoint not found: $sourceMainJs"
+}
+
+function Get-HermesInstalledAppExe {
+  if ($AppExe) {
+    return [System.IO.Path]::GetFullPath($AppExe)
+  }
+
+  $envAppExe = [System.Environment]::GetEnvironmentVariable("HERMES_PET_WINDOWS_APP_EXE", "Process")
+  if ($envAppExe) {
+    return [System.IO.Path]::GetFullPath($envAppExe)
+  }
+
+  $repoFull = [System.IO.Path]::GetFullPath($RepoPath)
+  $candidates = @(
+    (Join-Path (Split-Path -Parent (Split-Path -Parent $repoFull)) "Hermes Pets.exe"),
+    (Join-Path (Split-Path -Parent $repoFull) "Hermes Pets.exe"),
+    (Join-Path $repoFull "Hermes Pets.exe")
+  )
+  foreach ($candidate in $candidates) {
+    if (Test-Path -LiteralPath $candidate) {
+      return [System.IO.Path]::GetFullPath($candidate)
+    }
+  }
+
+  return $null
 }
 
 function Enter-HermesOverlayLaunchLock {
@@ -73,6 +102,7 @@ function Exit-HermesOverlayLaunchLock {
 
 
 function Get-HermesOverlayProcesses {
+  $installedAppExe = Get-HermesInstalledAppExe
   $targetMains = @(
     [System.IO.Path]::GetFullPath($mainJs),
     [System.IO.Path]::GetFullPath($sourceMainJs)
@@ -82,10 +112,20 @@ function Get-HermesOverlayProcesses {
   Get-CimInstance Win32_Process |
     Where-Object {
       $cmdLine = $_.CommandLine
-      if ($_.Name -ine "electron.exe" -or -not $cmdLine) {
+      $exePath = $_.ExecutablePath
+      if (-not $cmdLine) {
         $false
       } else {
         $matched = $false
+        if (
+          $installedAppExe -and
+          (
+            ($exePath -and $exePath.Equals($installedAppExe, [System.StringComparison]::OrdinalIgnoreCase)) -or
+            $cmdLine.IndexOf($installedAppExe, [System.StringComparison]::OrdinalIgnoreCase) -ge 0
+          )
+        ) {
+          $matched = $true
+        }
         foreach ($targetMain in $targetMains) {
           if ($cmdLine.IndexOf($targetMain, [System.StringComparison]::OrdinalIgnoreCase) -ge 0) {
             $matched = $true
@@ -268,6 +308,19 @@ try {
     New-Item -ItemType Directory -Path $cacheRoot | Out-Null
   }
 
+  $launchFile = $electronCmd
+  $argsList = @("`"$mainJs`"")
+  $workingDirectory = $appRoot
+
+  if ($Installed) {
+    $installedAppExe = Get-HermesInstalledAppExe
+    if (-not $installedAppExe -or -not (Test-Path -LiteralPath $installedAppExe)) {
+      throw "Installed Hermes Pets app executable not found. Set HERMES_PET_WINDOWS_APP_EXE or pass -AppExe."
+    }
+    $launchFile = $installedAppExe
+    $argsList = @()
+    $workingDirectory = Split-Path -Parent $installedAppExe
+  } else {
   if (-not (Test-Path $packageJson)) {
     @'
 {
@@ -275,8 +328,8 @@ try {
   "private": true,
   "version": "0.0.0",
   "dependencies": {
-    "electron": "33.0.0",
-    "ws": "8.18.0"
+    "electron": "42.3.3",
+    "ws": "8.21.0"
   }
 }
 '@ | Set-Content -Path $packageJson -Encoding UTF8
@@ -291,10 +344,13 @@ try {
   }
 
   Sync-HermesOverlayApp
+  }
 
   $env:HERMES_PET_PORT = [string]$Port
   $env:HERMES_PET_WS_URL = "ws://127.0.0.1:$Port"
-  $env:HERMES_PET_WINDOWS_NODE_MODULES = (Join-Path $cacheRoot "node_modules")
+  if (-not $Installed) {
+    $env:HERMES_PET_WINDOWS_NODE_MODULES = (Join-Path $cacheRoot "node_modules")
+  }
   if ($PositionFile) {
     $env:HERMES_PET_POSITION_FILE = $PositionFile
   }
@@ -319,10 +375,9 @@ try {
     }
   }
 
-  $argsList = @("`"$mainJs`"")
-  $proc = Start-Process -FilePath $electronCmd `
+  $proc = Start-Process -FilePath $launchFile `
     -ArgumentList $argsList `
-    -WorkingDirectory $appRoot `
+    -WorkingDirectory $workingDirectory `
     -PassThru
 
   Write-Output "Hermes Windows pet overlay started (pid $($proc.Id))"
