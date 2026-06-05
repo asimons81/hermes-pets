@@ -1,0 +1,121 @@
+{
+  "name": "elon-musk",
+  "source_format": "codex-pet",
+  "states": {
+    "failed": {
+      "fallback": "idle",
+      "fps": 7,
+      "frames": [
+        "failed_00.png",
+        "failed_01.png",
+        "failed_02.png",
+        "failed_03.png",
+        "failed_04.png",
+        "failed_05.png",
+        "failed_06.png",
+        "failed_07.png"
+      ],
+      "loop": false
+    },
+    "idle": {
+      "fps": 4,
+      "frames": [
+        "idle_00.png",
+        "idle_01.png",
+        "idle_02.png",
+        "idle_03.png",
+        "idle_04.png",
+        "idle_05.png"
+      ],
+      "loop": true
+    },
+    "jumping": {
+      "fallback": "idle",
+      "fps": 8,
+      "frames": [
+        "jumping_00.png",
+        "jumping_01.png",
+        "jumping_02.png",
+        "jumping_03.png",
+        "jumping_04.png"
+      ],
+      "loop": false
+    },
+    "review": {
+      "fps": 6,
+      "frames": [
+        "review_00.png",
+        "review_01.png",
+        "review_02.png",
+        "review_03.png",
+        "review_04.png",
+        "review_05.png"
+      ],
+      "loop": true
+    },
+    "run_left": {
+      "fps": 9,
+      "frames": [
+        "run_left_00.png",
+        "run_left_01.png",
+        "run_left_02.png",
+        "run_left_03.png",
+        "run_left_04.png",
+        "run_left_05.png",
+        "run_left_06.png",
+        "run_left_07.png"
+      ],
+      "loop": true
+    },
+    "run_right": {
+      "fps": 9,
+      "frames": [
+        "run_right_00.png",
+        "run_right_01.png",
+        "run_right_02.png",
+        "run_right_03.png",
+        "run_right_04.png",
+        "run_right_05.png",
+        "run_right_06.png",
+        "run_right_07.png"
+      ],
+      "loop": true
+    },
+    "running": {
+      "fps": 8,
+      "frames": [
+        "running_00.png",
+        "running_01.png",
+        "running_02.png",
+        "running_03.png",
+        "running_04.png",
+        "running_05.png"
+      ],
+      "loop": true
+    },
+    "waiting": {
+      "fps": 5,
+      "frames": [
+        "waiting_00.png",
+        "waiting_01.png",
+        "waiting_02.png",
+        "waiting_03.png",
+        "waiting_04.png",
+        "waiting_05.png"
+      ],
+      "loop": true
+    },
+    "waving": {
+      "fallback": "idle",
+      "fps": 8,
+      "frames": [
+        "waving_00.png",
+        "waving_01.png",
+        "waving_02.png",
+        "waving_03.png"
+      ],
+      "loop": false
+    }
+  },
+  "version": 1
+}

@@ -11,6 +11,8 @@ docs/custom-pets/
   freddy/
     README.md
     custom-pet.json
+    codex-pet.json
+    spritesheet.webp
     sprites/
       idle/
       run_left/
@@ -24,6 +26,8 @@ docs/custom-pets/
   jason/
     README.md
     custom-pet.json
+    codex-pet.json
+    spritesheet.webp
     sprites/
       idle/
       run_left/
@@ -37,6 +41,7 @@ docs/custom-pets/
   leatherface/
     README.md
     custom-pet.json
+    codex-pet.json
     contact-sheet.png
     sprites/
       idle/
@@ -62,6 +67,51 @@ docs/custom-pets/
       review/
       jumping/
       waving/
+  sam-altman/
+    README.md
+    custom-pet.json
+    codex-pet.json
+    spritesheet.webp
+    sprites/
+      idle/
+      run_left/
+      run_right/
+      running/
+      waiting/
+      failed/
+      review/
+      jumping/
+      waving/
+  elon-musk/
+    README.md
+    custom-pet.json
+    codex-pet.json
+    spritesheet.webp
+    sprites/
+      idle/
+      run_left/
+      run_right/
+      running/
+      waiting/
+      failed/
+      review/
+      jumping/
+      waving/
+  jeff-bezos/
+    README.md
+    custom-pet.json
+    codex-pet.json
+    spritesheet.webp
+    sprites/
+      idle/
+      run_left/
+      run_right/
+      running/
+      waiting/
+      failed/
+      review/
+      jumping/
+      waving/
 ```
 
 Each pet folder is a self-contained downloadable package. To add another custom pet later, copy one of the existing folders, keep the package name lowercase, update `custom-pet.json`, write a short README, and validate it before release.
@@ -76,6 +126,9 @@ These are the real sprite sheets and contact sheets from the curated packages, n
 | Jason | ![Jason preview sheet](jason/spritesheet.webp) |
 | Leatherface | ![Leatherface preview sheet](leatherface/contact-sheet.png) |
 | Haskell | ![Haskell preview sheet](haskell/contact-sheet.png) |
+| Sam Altman | ![Sam Altman preview sheet](sam-altman/spritesheet.webp) |
+| Elon Musk | ![Elon Musk preview sheet](elon-musk/spritesheet.webp) |
+| Jeff Bezos | ![Jeff Bezos preview sheet](jeff-bezos/spritesheet.webp) |
 
 ## Current gallery entries
 
@@ -83,3 +136,6 @@ These are the real sprite sheets and contact sheets from the curated packages, n
 - Jason
 - Leatherface
 - Haskell
+- Sam Altman
+- Elon Musk
+- Jeff Bezos

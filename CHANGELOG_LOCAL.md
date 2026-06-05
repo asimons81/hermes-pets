@@ -10,6 +10,19 @@ This file records local implementation milestones and release-candidate notes al
 
 ## Implemented Milestones
 
+## v0.6.2 - 2026-06-04
+
+### Added
+
+- Added Sam Altman, Elon Musk, and Jeff Bezos as repository-backed curated custom pet packages under `docs/custom-pets/`.
+- Added per-pet README files, Codex source metadata, spritesheets, extracted sprite frames, and static site preview assets for the new packages.
+- Added a public release note for the gallery expansion release.
+
+### Changed
+
+- Bumped package metadata from `0.6.1` to `0.6.2` for the gallery expansion release.
+- Updated the custom pet gallery index and static site release strip to reflect the expanded package set.
+
 ## v0.6.1 - 2026-05-24
 
 ### Added
