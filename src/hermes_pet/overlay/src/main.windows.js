@@ -170,6 +170,10 @@ function createWindow() {
       "document.body.classList.add('overlay-mode')",
     ).catch(() => {});
     verifyEvent('renderer-loaded');
+    // Re-assert bridge connection state — WebSocket may have connected before
+    // renderer registered its IPC listener, causing the initial notification
+    // to be dropped and the status bar to stick on "Waiting for Hermes".
+    if (bridgeConnected !== null) win.webContents.send('bridge-connected', bridgeConnected);
     setTimeout(() => verifyRendererSnapshot('renderer-loaded'), 250);
     setTimeout(() => markReadyToShow('did-finish-load-fallback'), 1000);
   }

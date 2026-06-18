@@ -199,6 +199,10 @@ function createWindow() {
     if (process.env.HERMES_PET_DEBUG_SPRITE === '1') classes.push('debug-sprite');
     win.webContents.executeJavaScript(`document.body.classList.add(${classes.map((c) => JSON.stringify(c)).join(',')})`).catch(() => {});
     if (fs.existsSync(CUSTOM_SPRITE_PATH)) emitCustomSprite(CUSTOM_SPRITE_PATH);
+    // Re-assert bridge connection state — WebSocket may have connected before
+    // renderer registered its IPC listener, causing the initial notification
+    // to be dropped and the status bar to stick on "Waiting for Hermes".
+    if (bridgeConnected !== null) win.webContents.send('bridge-connected', bridgeConnected);
   });
 
   win.once('ready-to-show', () => {

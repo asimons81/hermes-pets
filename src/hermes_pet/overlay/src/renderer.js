@@ -573,23 +573,12 @@ function titleCaseText(value) {
   });
 }
 
-function achievementTitle(msg) {
-  var achievement = msg && typeof msg.achievement === 'object' ? msg.achievement : {};
-  return singleLineText(
-    achievement.title || achievement.name || msg.title || msg.text || achievement.id || msg.id || 'Achievement',
-    120
-  ) || 'Achievement';
-}
-
 function eventText(msg) {
   if (msg.type === 'message_received') {
     const source = titleCaseText(msg.source || 'message');
     const sender = singleLineText(msg.sender || 'someone', 60);
     const body = singleLineText(msg.text || '', 180);
     return body ? source + ' from ' + sender + ': ' + body : source + ' from ' + sender;
-  }
-  if (msg.type === 'achievement_unlocked') {
-    return 'Achievement unlocked: ' + achievementTitle(msg);
   }
   if (msg.text) return singleLineText(msg.text, 220);
   return String(msg.type || 'Event');
@@ -611,7 +600,6 @@ function eventGroup(msg) {
   if (msg.type === 'message_received') return 'messages';
   if (msg.type === 'approval_needed') return 'approvals';
   if (msg.type === 'daily_brief') return 'briefs';
-  if (msg.type === 'achievement_unlocked') return 'achievements';
   return 'status';
 }
 
@@ -652,7 +640,6 @@ function eventIcon(msg) {
     approval_needed: '?',
     message_received: '@',
     daily_brief: '#',
-    achievement_unlocked: 'A',
     bubble: '*'
   };
   return iconByType[msg.type] || '*';
@@ -713,7 +700,7 @@ function recordJobHistory(msg) {
 function renderRecentEvents() {
   if (!eventListEl) return;
   if (currentStatusEl) currentStatusEl.textContent = state.currentStatus || 'Idle';
-  var summary = { jobs: 0, messages: 0, approvals: 0, briefs: 0, achievements: 0, status: 0 };
+  var summary = { jobs: 0, messages: 0, approvals: 0, briefs: 0, status: 0 };
   var attention = false;
   recentEvents.forEach(function(item) {
     var group = item.group || eventGroup(item);
@@ -727,7 +714,6 @@ function renderRecentEvents() {
     if (summary.messages) parts.push(summary.messages + ' msg' + (summary.messages === 1 ? '' : 's'));
     if (summary.approvals) parts.push(summary.approvals + ' approval' + (summary.approvals === 1 ? '' : 's'));
     if (summary.briefs) parts.push(summary.briefs + ' brief' + (summary.briefs === 1 ? '' : 's'));
-    if (summary.achievements) parts.push(summary.achievements + ' achievement' + (summary.achievements === 1 ? '' : 's'));
     eventSummaryEl.textContent = parts.length ? parts.join(' / ') : '0 recent';
   }
   if (eventTrayEl) {
@@ -804,20 +790,13 @@ function bubbleChannelForEvent(msg) {
   if (msg.type === 'job_started') return 'job_lifecycle';
   if (msg.type === 'job_finished') return 'job_success';
   if (msg.type === 'daily_brief') return 'brief';
-  if (msg.type === 'achievement_unlocked') return 'achievement';
   return msg.type || 'event';
-}
-
-function shouldSuppressNonCriticalNotification(msg) {
-  if (isCriticalEvent(msg)) return false;
-  if (mutedNow()) return true;
-  if (notificationPrefs.quiet_mode !== 'off') return true;
-  return notificationPrefs.notification_profile === 'silent';
 }
 
 function shouldShowEventBubble(msg) {
   var critical = isCriticalEvent(msg);
-  if (!critical && shouldSuppressNonCriticalNotification(msg)) return false;
+  if (mutedNow() && !critical) return false;
+  if (notificationPrefs.quiet_mode !== 'off' && !critical) return false;
   if (critical) return true;
   var now = Date.now();
   var text = eventText(msg);
@@ -843,8 +822,7 @@ function bubbleTextForEvent(msg) {
     job_failed: 'Failed: ',
     approval_needed: 'Approval needed: ',
     message_received: msg.urgent || msg.severity === 'warning' ? 'Urgent message: ' : 'Message: ',
-    daily_brief: 'Daily brief: ',
-    achievement_unlocked: ''
+    daily_brief: 'Daily brief: '
   };
   return (prefixByType[msg.type] || '') + text;
 }
@@ -857,6 +835,34 @@ function transitionForEvent(msg) {
     }
     animController.transition(next);
   }
+}
+
+// ---- Tool → animation mapping (agent:step tool_names → pet animation) ----
+var TOOL_ANIM_READ = new Set([
+  'web_search', 'web_extract', 'read_file', 'search_files',
+  'feishu_doc_read', 'session_search', 'skill_view', 'skills_list',
+  'feishu_drive_list_comments', 'feishu_drive_list_comment_replies',
+]);
+var TOOL_ANIM_EXEC = new Set([
+  'terminal', 'execute_code', 'patch', 'write_file',
+]);
+var TOOL_ANIM_DELEGATE = new Set([
+  'delegate_task',
+]);
+var TOOL_ANIM_INTERACT = new Set([
+  'clarify', 'send_message', 'feishu_drive_add_comment',
+  'feishu_drive_reply_comment',
+]);
+
+function toolAnimationFor(toolNames) {
+  for (var i = 0; i < toolNames.length; i++) {
+    var t = toolNames[i];
+    if (TOOL_ANIM_READ.has(t))     return { animation: 'review',  reactionMs: 800, trayMs: 0 };
+    if (TOOL_ANIM_EXEC.has(t))     return { animation: 'running', reactionMs: 800, trayMs: 0 };
+    if (TOOL_ANIM_DELEGATE.has(t)) return { animation: 'run_right', reactionMs: 800, trayMs: 0 };
+    if (TOOL_ANIM_INTERACT.has(t)) return { animation: 'message_react', reactionMs: 800, trayMs: 0 };
+  }
+  return null; // fall through to default bubble_react
 }
 
 function eventReactionFor(msg) {
@@ -879,11 +885,13 @@ function eventReactionFor(msg) {
   if (msg.type === 'daily_brief') {
     return { animation: 'waving', reactionMs: 750, trayMs: 6000 };
   }
-  if (msg.type === 'achievement_unlocked') {
-    return { animation: 'bubble_react', reactionMs: 650, trayMs: 4500 };
-  }
   if (msg.type === 'status') {
     return { animation: severity === 'warning' ? 'review' : 'waiting', reactionMs: 650, trayMs: 0 };
+  }
+  // Tool-specific animation from agent:step bubble
+  if (msg.tool_names && msg.tool_names.length > 0) {
+    var toolAnim = toolAnimationFor(msg.tool_names);
+    if (toolAnim) return toolAnim;
   }
   return { animation: 'bubble_react', reactionMs: 850, trayMs: 0 };
 }
@@ -919,7 +927,6 @@ function handleAmbientEvent(msg) {
 }
 
 function shouldShowEventTray(msg) {
-  if (shouldSuppressNonCriticalNotification(msg)) return false;
   if (msg.type === 'approval_needed' || msg.type === 'job_failed') return true;
   if (notificationPrefs.quiet_mode === 'silent' && !isCriticalEvent(msg)) return false;
   if (msg.urgent) return notificationPrefs.show_tray_on_urgent;
@@ -1349,17 +1356,6 @@ if (DEBUG_EVENTS || new URLSearchParams(window.location.search).get('debugSmoke'
     getCurrentAnimation: function() { return animController.currentState; },
     isTrayVisible: function() { return !!eventTrayEl && !eventTrayEl.classList.contains('hidden'); },
     isTrayAttention: function() { return !!eventTrayEl && eventTrayEl.classList.contains('attention'); },
-    getBubbleText: function() { return bubbleTextEl ? bubbleTextEl.textContent : ''; },
-    resetActivityForSmoke: function() {
-      recentEvents.length = 0;
-      trayAttention = false;
-      if (bubbleTimeout) clearTimeout(bubbleTimeout);
-      if (bubblePulseTimeout) clearTimeout(bubblePulseTimeout);
-      bubbleTimeout = null;
-      bubblePulseTimeout = null;
-      if (bubbleTextEl) bubbleTextEl.textContent = '';
-      if (bubbleEl) bubbleEl.className = 'bubble hidden';
-      setEventTrayVisible(false, 0);
-    }
+    getBubbleText: function() { return bubbleTextEl ? bubbleTextEl.textContent : ''; }
   };
 }

@@ -837,6 +837,34 @@ function transitionForEvent(msg) {
   }
 }
 
+// ---- Tool → animation mapping (agent:step tool_names → pet animation) ----
+var TOOL_ANIM_READ = new Set([
+  'web_search', 'web_extract', 'read_file', 'search_files',
+  'feishu_doc_read', 'session_search', 'skill_view', 'skills_list',
+  'feishu_drive_list_comments', 'feishu_drive_list_comment_replies',
+]);
+var TOOL_ANIM_EXEC = new Set([
+  'terminal', 'execute_code', 'patch', 'write_file',
+]);
+var TOOL_ANIM_DELEGATE = new Set([
+  'delegate_task',
+]);
+var TOOL_ANIM_INTERACT = new Set([
+  'clarify', 'send_message', 'feishu_drive_add_comment',
+  'feishu_drive_reply_comment',
+]);
+
+function toolAnimationFor(toolNames) {
+  for (var i = 0; i < toolNames.length; i++) {
+    var t = toolNames[i];
+    if (TOOL_ANIM_READ.has(t))     return { animation: 'review',  reactionMs: 800, trayMs: 0 };
+    if (TOOL_ANIM_EXEC.has(t))     return { animation: 'running', reactionMs: 800, trayMs: 0 };
+    if (TOOL_ANIM_DELEGATE.has(t)) return { animation: 'run_right', reactionMs: 800, trayMs: 0 };
+    if (TOOL_ANIM_INTERACT.has(t)) return { animation: 'message_react', reactionMs: 800, trayMs: 0 };
+  }
+  return null; // fall through to default bubble_react
+}
+
 function eventReactionFor(msg) {
   var severity = eventSeverity(msg);
   if (msg.type === 'job_failed' || severity === 'error') {
@@ -859,6 +887,11 @@ function eventReactionFor(msg) {
   }
   if (msg.type === 'status') {
     return { animation: severity === 'warning' ? 'review' : 'waiting', reactionMs: 650, trayMs: 0 };
+  }
+  // Tool-specific animation from agent:step bubble
+  if (msg.tool_names && msg.tool_names.length > 0) {
+    var toolAnim = toolAnimationFor(msg.tool_names);
+    if (toolAnim) return toolAnim;
   }
   return { animation: 'bubble_react', reactionMs: 850, trayMs: 0 };
 }
