@@ -223,6 +223,14 @@ def _copy_overlay_resource_tree(source: Traversable, target: Path) -> None:
             child_target.write_bytes(child.read_bytes())
 
 
+def _safe_rmtree(path: Path) -> bool:
+    try:
+        shutil.rmtree(path)
+        return True
+    except PermissionError:
+        return False
+
+
 def _packaged_overlay_resource() -> Traversable | None:
     try:
         overlay = resources.files("hermes_pet").joinpath("overlay")
@@ -242,7 +250,12 @@ def _ensure_cached_packaged_overlay() -> Path:
 
     cache_overlay = _cache_dir() / "overlay"
     if cache_overlay.exists():
-        shutil.rmtree(cache_overlay)
+        if not _safe_rmtree(cache_overlay):
+            if _is_overlay_runtime_dir(cache_overlay):
+                return cache_overlay
+            raise PetCLIError(
+                f"Cached overlay assets are locked and could not be refreshed: {cache_overlay}"
+            )
     _copy_overlay_resource_tree(overlay, cache_overlay)
     if not _is_overlay_runtime_dir(cache_overlay):
         raise PetCLIError(f"Cached overlay assets are incomplete: {cache_overlay}")
@@ -258,6 +271,13 @@ def _overlay_dir() -> Path:
     if not os.environ.get("HERMES_PET_FORCE_PACKAGED_OVERLAY") and _is_overlay_runtime_dir(source_overlay):
         return source_overlay
     return _ensure_cached_packaged_overlay()
+
+
+def _should_append_installed_overlay_flag() -> bool:
+    if sys.platform != "win32" or _is_wsl():
+        return False
+    installed_overlay = _installed_overlay_dir()
+    return installed_overlay is not None and _is_overlay_runtime_dir(installed_overlay)
 
 
 def _load_pet() -> Pet | None:
@@ -540,7 +560,7 @@ def _launch_bridge_and_overlay(args: argparse.Namespace) -> int:
                     "-PositionFile",
                     _wsl_to_windows_path(position_file),
                 ]
-                if sys.platform == "win32" and not _is_wsl():
+                if _should_append_installed_overlay_flag():
                     cmd.append("-Installed")
                 if getattr(args, "replace", False):
                     cmd.append("-Replace")
@@ -620,7 +640,7 @@ def _run_overlay_launcher(*, port: int, mode: str) -> subprocess.CompletedProces
         "-Port",
         str(port),
     ]
-    if sys.platform == "win32" and not _is_wsl():
+    if _should_append_installed_overlay_flag():
         cmd.append("-Installed")
     if mode == "status":
         cmd.append("-Status")
@@ -851,7 +871,7 @@ def _cmd_doctor(args: argparse.Namespace) -> int:
                 str(port),
                 "-Status",
             ]
-            if sys.platform == "win32" and not _is_wsl():
+            if _should_append_installed_overlay_flag():
                 status_cmd.append("-Installed")
             try:
                 status_result = subprocess.run(status_cmd, cwd=str(_repo_root()), capture_output=True, text=True, timeout=10)

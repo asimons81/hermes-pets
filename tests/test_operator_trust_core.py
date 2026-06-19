@@ -199,6 +199,56 @@ def test_doctor_strict_fails_when_checks_warn(monkeypatch, tmp_path) -> None:
     assert cli._cmd_doctor(argparse.Namespace(strict=True)) == 1
 
 
+def test_ensure_cached_packaged_overlay_reuses_locked_valid_cache(monkeypatch, tmp_path) -> None:
+    packaged_overlay = tmp_path / "packaged-overlay"
+    cache_overlay = tmp_path / "state" / "cache" / "overlay"
+
+    for root in (packaged_overlay, cache_overlay):
+        for rel in cli._overlay_required_files():
+            target = root / rel
+            target.parent.mkdir(parents=True, exist_ok=True)
+            target.write_text("ok\\n", encoding="utf-8")
+
+    monkeypatch.setattr(cli, "_state_dir", lambda: tmp_path / "state")
+    monkeypatch.setattr(cli, "_packaged_overlay_resource", lambda: packaged_overlay)
+    monkeypatch.setattr(cli, "_safe_rmtree", lambda path: False)
+    monkeypatch.setattr(
+        cli,
+        "_copy_overlay_resource_tree",
+        lambda *args, **kwargs: pytest.fail("should reuse the valid locked cache"),
+    )
+
+    result = cli._ensure_cached_packaged_overlay()
+
+    assert result == cache_overlay
+
+
+def test_ensure_cached_packaged_overlay_errors_when_locked_cache_invalid(monkeypatch, tmp_path) -> None:
+    packaged_overlay = tmp_path / "packaged-overlay"
+    cache_overlay = tmp_path / "state" / "cache" / "overlay"
+
+    for rel in cli._overlay_required_files():
+        target = packaged_overlay / rel
+        target.parent.mkdir(parents=True, exist_ok=True)
+        target.write_text("ok\\n", encoding="utf-8")
+
+    cache_overlay.mkdir(parents=True, exist_ok=True)
+    (cache_overlay / "src").mkdir(exist_ok=True)
+
+    monkeypatch.setattr(cli, "_state_dir", lambda: tmp_path / "state")
+    monkeypatch.setattr(cli, "_packaged_overlay_resource", lambda: packaged_overlay)
+    monkeypatch.setattr(cli, "_safe_rmtree", lambda path: False)
+    monkeypatch.setattr(cli, "_is_overlay_runtime_dir", lambda path: False if path == cache_overlay else True)
+    monkeypatch.setattr(
+        cli,
+        "_copy_overlay_resource_tree",
+        lambda *args, **kwargs: pytest.fail("should not overwrite locked cache"),
+    )
+
+    with pytest.raises(cli.PetCLIError, match="locked and could not be refreshed"):
+        cli._ensure_cached_packaged_overlay()
+
+
 def test_launch_bridge_and_overlay_uses_replace_mode_with_windows_launcher(monkeypatch, tmp_path) -> None:
     overlay_dir = tmp_path / "overlay"
     launcher = overlay_dir / "scripts" / "launch-windows-overlay.ps1"
@@ -240,11 +290,15 @@ def test_native_windows_launch_uses_installed_launcher_mode(monkeypatch, tmp_pat
     overlay_dir = tmp_path / "resources" / "overlay"
     launcher = overlay_dir / "scripts" / "launch-windows-overlay.ps1"
     launcher.parent.mkdir(parents=True)
-    launcher.write_text("# launcher placeholder\n", encoding="utf-8")
+    for rel in cli._overlay_required_files():
+        target = overlay_dir / rel
+        target.parent.mkdir(parents=True, exist_ok=True)
+        target.write_text("ok\\n", encoding="utf-8")
+    launcher.write_text("# launcher placeholder\\n", encoding="utf-8")
 
     bridge_exe = tmp_path / "bin" / "hermes-pet-bridge.exe"
     bridge_exe.parent.mkdir()
-    bridge_exe.write_text("placeholder\n", encoding="utf-8")
+    bridge_exe.write_text("placeholder\\n", encoding="utf-8")
 
     class Bridge:
         PET_BRIDGE_DEFAULT_PORT = 17473
@@ -265,6 +319,7 @@ def test_native_windows_launch_uses_installed_launcher_mode(monkeypatch, tmp_pat
     monkeypatch.setattr(cli, "_is_wsl", lambda: False)
     monkeypatch.setattr(cli, "_state_dir", lambda: tmp_path / "state")
     monkeypatch.setattr(cli, "_overlay_dir", lambda: overlay_dir)
+    monkeypatch.setattr(cli, "_installed_overlay_dir", lambda: overlay_dir)
     monkeypatch.setattr(cli, "_repo_root", lambda: tmp_path)
     monkeypatch.setattr(cli, "_bundled_bridge_executable", lambda: bridge_exe)
     monkeypatch.setattr(cli.shutil, "which", lambda command: "powershell.exe" if command == "powershell.exe" else None)
@@ -295,11 +350,42 @@ def test_start_bridge_process_uses_bundled_bridge_exe(monkeypatch, tmp_path) -> 
     assert captured_cmd == [str(bridge_exe), "--serve", "--port", "17473"]
 
 
+def test_run_overlay_launcher_native_windows_skips_installed_for_pip_install(monkeypatch, tmp_path) -> None:
+    overlay_dir = tmp_path / "overlay"
+    launcher = overlay_dir / "scripts" / "launch-windows-overlay.ps1"
+    launcher.parent.mkdir(parents=True)
+    launcher.write_text("# launcher placeholder\\n", encoding="utf-8")
+    captured_cmd: list[str] = []
+
+    def fake_run(cmd, **kwargs):
+        nonlocal captured_cmd
+        captured_cmd = list(cmd)
+        return cli.subprocess.CompletedProcess(cmd, 0, stdout="Overlay processes: none\\n", stderr="")
+
+    monkeypatch.setattr(cli.sys, "platform", "win32")
+    monkeypatch.setattr(cli, "_is_wsl", lambda: False)
+    monkeypatch.setattr(cli, "_overlay_dir", lambda: overlay_dir)
+    monkeypatch.setattr(cli, "_installed_overlay_dir", lambda: None)
+    monkeypatch.setattr(cli, "_repo_root", lambda: tmp_path)
+    monkeypatch.setattr(cli.shutil, "which", lambda command: "powershell.exe" if command == "powershell.exe" else None)
+    monkeypatch.setattr(cli.subprocess, "run", fake_run)
+
+    result = cli._run_overlay_launcher(port=17473, mode="status")
+
+    assert result.returncode == 0
+    assert "-Installed" not in captured_cmd
+    assert "-Status" in captured_cmd
+
+
 def test_run_overlay_launcher_native_windows_adds_installed(monkeypatch, tmp_path) -> None:
     overlay_dir = tmp_path / "resources" / "overlay"
     launcher = overlay_dir / "scripts" / "launch-windows-overlay.ps1"
     launcher.parent.mkdir(parents=True)
-    launcher.write_text("# launcher placeholder\n", encoding="utf-8")
+    for rel in cli._overlay_required_files():
+        target = overlay_dir / rel
+        target.parent.mkdir(parents=True, exist_ok=True)
+        target.write_text("ok\\n", encoding="utf-8")
+    launcher.write_text("# launcher placeholder\\n", encoding="utf-8")
     captured_cmd: list[str] = []
 
     def fake_run(cmd, **kwargs):
@@ -310,6 +396,7 @@ def test_run_overlay_launcher_native_windows_adds_installed(monkeypatch, tmp_pat
     monkeypatch.setattr(cli.sys, "platform", "win32")
     monkeypatch.setattr(cli, "_is_wsl", lambda: False)
     monkeypatch.setattr(cli, "_overlay_dir", lambda: overlay_dir)
+    monkeypatch.setattr(cli, "_installed_overlay_dir", lambda: overlay_dir)
     monkeypatch.setattr(cli, "_repo_root", lambda: tmp_path)
     monkeypatch.setattr(cli.shutil, "which", lambda command: "powershell.exe" if command == "powershell.exe" else None)
     monkeypatch.setattr(cli.subprocess, "run", fake_run)
