@@ -1,8 +1,28 @@
-# Hermes Pets
+# Hermes Pets — ARCHIVED
+
+> **⚠️ This repository is archived.**
+>
+> The official [Hermes Agent](https://github.com/NousResearch/hermes-agent) now
+> has pets built in — run `hermes pets` to browse the petdex gallery, install
+> a mascot, and see it animate in the TUI or desktop app. Everything this
+> standalone project did (and more) is available out of the box on modern
+> Hermes.
+>
+> **What to do instead:**
+> - `hermes pets list` — browse the gallery
+> - `hermes pets install <slug> --select` — install and activate a pet
+> - `hermes pets doctor` — verify your setup
+> - Browse the public gallery at **[petdex.dev](https://petdex.dev)**
+>
+> No further development will happen here. Custom pets from this project's
+> gallery have been or can be submitted to petdex.dev. Thanks to everyone who
+> starred, forked, or contributed.
+
+---
 
 ![Hermes Pets promo banner](docs/assets/hermes-pet-banner-updated.png)
 
-Hermes Pets is a local desktop companion for Hermes-style daily work, a small overlay that reacts to commands, messages, briefs, and ambient status events while staying fully controllable from the terminal.
+Hermes Pets was a local desktop companion for Hermes-style daily work, a small overlay that reacts to commands, messages, briefs, and ambient status events while staying fully controllable from the terminal.
 
 It exists to make long local coding sessions feel more legible and alive. The pet gives visible feedback when work starts, finishes, fails, needs attention, or goes quiet, without requiring a hosted service or remote account.
 
